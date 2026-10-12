@@ -10,9 +10,10 @@ import { COMMUTATOR, GEO } from './config.js';
 import { COLOR_A, COLOR_B, COLOR_N, COLOR_S } from './materialien.js';
 
 const $ = id => document.getElementById(id);
-const INK = '#33404d', IRON = '#8a939c', IRON_DARK = '#5c636b', COPPER = '#c46a2b';
+const INK = '#33404d', IRON = '#6b737c', IRON_DARK = '#4f565e', IRON_ROTOR = '#c9d0d8', COPPER = '#c46a2b';
 const CURRENT = '#f57c00', FORCE = '#7b1fa2', FIELD = 'rgba(30, 136, 229, 0.45)';
-const poleColor = p => (p === 'N' ? COLOR_N : p === 'S' ? COLOR_S : IRON);
+// Polfarbe; ohne Pol die Eisenfarbe des Teils (Stator dunkler, Anker heller)
+const poleColor = (p, iron = IRON) => (p === 'N' ? COLOR_N : p === 'S' ? COLOR_S : iron);
 
 function arrowHead(ctx, x, y, angle, size = 9) {
   ctx.beginPath();
@@ -68,7 +69,7 @@ export function drawSketch() {
   const k = 19 * u / GEO.rotorRadius;             // Maßstab: Ankerradius 19u
   const rr = GEO.rotorRadius * k, rs = (GEO.rotorRadius + GEO.airGap) * k;
   const shoeIn = (GEO.rotorRadius - GEO.shoeThickness) * k;
-  const half = GEO.shoeHalf;
+  const half = GEO.shoeHalf, rotorHalf = GEO.rotorShoeHalf;
   const elektro = state.stator === 'elektro';
   const phi = state.phi;
   const i = armatureCurrent(phi, state);
@@ -130,7 +131,7 @@ export function drawSketch() {
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(ang);
-  ctx.fillStyle = IRON;
+  ctx.fillStyle = IRON_ROTOR;
   ctx.fillRect(-shoeIn, -GEO.armHeight * k / 2, 2 * shoeIn, GEO.armHeight * k);
   ctx.beginPath(); ctx.arc(0, 0, 1.0 * k, 0, 2 * Math.PI); ctx.fill();
   // Spulen auf den Armen
@@ -143,7 +144,7 @@ export function drawSketch() {
   for (const [end, color] of [['A', COLOR_A], ['B', COLOR_B]]) {
     const pole = rotorPole(end, phi, state);
     const c = ang + (end === 'A' ? 0 : Math.PI);
-    arcBand(ctx, cx, cy, shoeIn, rr, c, half, state.showPoles ? poleColor(pole) : IRON);
+    arcBand(ctx, cx, cy, shoeIn, rr, c, rotorHalf, state.showPoles ? poleColor(pole, IRON_ROTOR) : IRON_ROTOR);
     arcBand(ctx, cx, cy, shoeIn - 1.2 * u, shoeIn, c, 0.3, color);      // Farbmarke wie die Kommutatorhälfte
     if (state.showPoles && pole) letter(ctx, pole, cx + (shoeIn + rr) / 2 * Math.cos(c), cy + (shoeIn + rr) / 2 * Math.sin(c), 4.5 * u);
   }

@@ -108,16 +108,16 @@ for (const z of [-5.2, CZ + 2.6]) {
 export const rotor = new THREE.Group();
 scene.add(rotor);
 rod([0, 0, -5.8], [0, 0, CZ + 3.2], 0.22, mat.steel, rotor);
-const hub = addMesh(new THREE.CylinderGeometry(1.0, 1.0, D, 24), mat.iron, rotor);
+const hub = addMesh(new THREE.CylinderGeometry(1.0, 1.0, D, 24), mat.ironRotor, rotor);
 hub.rotation.x = Math.PI / 2;
 const ARM_IN = RR - GEO.shoeThickness;             // Arme bis zu den Polschuhen
-const arm = addMesh(new THREE.BoxGeometry(2 * ARM_IN, GEO.armHeight, D), mat.iron, rotor);
+const arm = addMesh(new THREE.BoxGeometry(2 * ARM_IN, GEO.armHeight, D), mat.ironRotor, rotor);
 arm.position.z = 0;
 // Polschuhe A (bei phi) und B (gegenüber) mit Frontplatten für die Polfarbe und Farbmarke
 const shoeFront = {};
 for (const [end, center, marker] of [['A', 0, mat.halfA], ['B', Math.PI, mat.halfB]]) {
-  arcShell(ARM_IN, RR, center, GEO.shoeHalf, -ZF, D, mat.iron, rotor);
-  shoeFront[end] = arcShell(ARM_IN + 0.02, RR - 0.02, center, GEO.shoeHalf - 0.02, ZF, 0.12, mat.neutral, rotor);
+  arcShell(ARM_IN, RR, center, GEO.rotorShoeHalf, -ZF, D, mat.ironRotor, rotor);
+  shoeFront[end] = arcShell(ARM_IN + 0.02, RR - 0.02, center, GEO.rotorShoeHalf - 0.02, ZF, 0.12, mat.ironRotor, rotor);
   arcShell(ARM_IN - 0.35, ARM_IN, center, 0.32, ZF, 0.14, marker, rotor);   // Farbmarke wie die Kommutatorhälfte
 }
 // Spulen auf beiden Armen (in Reihe, gleicher Wickelsinn)
@@ -201,7 +201,7 @@ for (const side of [-1, 1]) {
   const core = addMesh(new THREE.BoxGeometry(E_YOKE + 0.1 - E_CORE_IN, CORE_H, D), mat.iron, electro);
   core.position.x = side * (E_CORE_IN + E_YOKE + 0.1) / 2;
   arcShell(RS, E_CORE_IN, side < 0 ? Math.PI : 0, GEO.shoeHalf, -ZF, D, mat.iron, electro);
-  statorFront[side] = arcShell(RS + 0.02, E_CORE_IN - 0.02, side < 0 ? Math.PI : 0, GEO.shoeHalf - 0.02, ZF, 0.12, mat.neutral, electro);
+  statorFront[side] = arcShell(RS + 0.02, E_CORE_IN - 0.02, side < 0 ? Math.PI : 0, GEO.shoeHalf - 0.02, ZF, 0.12, mat.iron, electro);
   coil(side < 0 ? -E_YOKE + 0.5 : E_CORE_IN + 0.3, side < 0 ? -E_CORE_IN - 0.3 : E_YOKE - 0.5, CORE_H / 2, ZF, 3, electro);
   statorLabels[side] = { N: makeTextPlane('N', 1.2, { color: '#ffffff' }), S: makeTextPlane('S', 1.2, { color: '#ffffff' }) };
   for (const label of Object.values(statorLabels[side])) {
@@ -286,7 +286,8 @@ const forceLabels = { A: makeTextPlane('F', 1.2, { color: '#7b1fa2' }), B: makeT
 for (const end of ['A', 'B']) scene.add(forceArrows[end], forceLabels[end]);
 
 // ---------------- Abgleich mit dem Zustand (jedes Bild)
-const poleMat = pole => (pole === 'N' ? mat.north : pole === 'S' ? mat.south : mat.neutral);
+// Polfarbe; ohne Pol (oder ohne Polanzeige) die Eisenfarbe des Teils
+const poleMat = (pole, iron) => (pole === 'N' ? mat.north : pole === 'S' ? mat.south : iron);
 let flow = 0;
 export function syncApparatus(dt) {
   const phi = state.phi;
@@ -303,7 +304,7 @@ export function syncApparatus(dt) {
       magnetLabels[side].N.visible = pole === 'N';
       magnetLabels[side].S.visible = pole === 'S';
     } else {
-      statorFront[side].material = state.showPoles ? poleMat(pole) : mat.iron;
+      statorFront[side].material = state.showPoles ? poleMat(pole, mat.iron) : mat.iron;
       statorLabels[side].N.visible = state.showPoles && pole === 'N';
       statorLabels[side].S.visible = state.showPoles && pole === 'S';
     }
@@ -313,7 +314,7 @@ export function syncApparatus(dt) {
   const i = armatureCurrent(phi, state).armature;
   for (const end of ['A', 'B']) {
     const pole = rotorPole(end, phi, state);
-    shoeFront[end].material = state.showPoles ? poleMat(pole) : mat.iron;
+    shoeFront[end].material = state.showPoles ? poleMat(pole, mat.ironRotor) : mat.ironRotor;
     const a = phi + (end === 'A' ? 0 : Math.PI), r = (ARM_IN + RR) / 2;
     for (const p of ['N', 'S']) {
       const label = rotorLabels[end][p];

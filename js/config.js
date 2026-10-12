@@ -34,7 +34,8 @@ export const GEO = {
   depth: 7,                // Tiefe von Anker und Stator (z)
   rotorRadius: 4.0,        // Außenradius der Ankerpolschuhe
   shoeThickness: 1.0,      // Dicke der Polschuhe
-  shoeHalf: 55 * Math.PI / 180,   // halbe Breite der Polschuhe (Anker und Stator)
+  shoeHalf: 55 * Math.PI / 180,   // halbe Breite der Statorpole
+  rotorShoeHalf: 30 * Math.PI / 180,   // halbe Breite der Polschuhe des Ankers
   armHeight: 1.6,          // Höhe der Ankerarme (y)
   airGap: 0.35,            // Luftspalt zwischen Anker und Stator
   commZ: 6.3,              // Mitte des Kommutators auf der Achse (z)

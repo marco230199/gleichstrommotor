@@ -13,11 +13,12 @@ export const COLOR_S = '#2e7d32';
 export const mat = {
   table: new THREE.MeshStandardMaterial({ color: 0xc8a27a, roughness: 0.8 }),
   wood: new THREE.MeshStandardMaterial({ color: 0x9c6b3c, roughness: 0.7 }),
-  iron: new THREE.MeshStandardMaterial({ color: 0x7d858e, metalness: 0.55, roughness: 0.45 }),
-  ironDark: new THREE.MeshStandardMaterial({ color: 0x5c636b, metalness: 0.55, roughness: 0.5 }),
+  // Eisen: Stator dunkler, Anker deutlich heller – so sind beide auch ohne Polfarben gut zu unterscheiden
+  iron: new THREE.MeshStandardMaterial({ color: 0x5d656e, metalness: 0.35, roughness: 0.65 }),
+  ironRotor: new THREE.MeshStandardMaterial({ color: 0xdde3ea, metalness: 0.15, roughness: 0.45 }),
+  ironDark: new THREE.MeshStandardMaterial({ color: 0x4a5058, metalness: 0.35, roughness: 0.65 }),
   north: new THREE.MeshStandardMaterial({ color: COLOR_N, roughness: 0.45 }),
   south: new THREE.MeshStandardMaterial({ color: COLOR_S, roughness: 0.45 }),
-  neutral: new THREE.MeshStandardMaterial({ color: 0x9aa3ad, roughness: 0.5 }),
   copper: new THREE.MeshStandardMaterial({ color: 0xc8733a, metalness: 0.85, roughness: 0.35 }),
   copperDark: new THREE.MeshStandardMaterial({ color: 0xa65a26, metalness: 0.8, roughness: 0.4 }),
   steel: new THREE.MeshStandardMaterial({ color: 0xb9bec4, metalness: 0.9, roughness: 0.3 }),

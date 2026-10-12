@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gleichstrommotor</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="scene"></div>
+
+  <div class="header">
+    <h1>Gleichstrommotor</h1>
+    <p>Anker aus Spulen mit Eisenkern, Stator als Permanent- oder Elektromagnet</p>
+  </div>
+
+  <section class="sketch" id="sketch" aria-label="Schaltskizze">
+    <div class="sketch-head">
+      <h2>Schaltskizze <span>(Blick entlang der Achse)</span></h2>
+      <button id="sketchSizeBtn" type="button" aria-pressed="false">Größer</button>
+    </div>
+    <canvas id="sketchCanvas"></canvas>
+    <p id="sketchStatus" role="status"></p>
+  </section>
+
+  <div class="hint">
+    <span class="hint-text">Ziehen: drehen · zwei Finger: zoomen und verschieben</span>
+    <button id="viewStart" type="button">Gesamtansicht</button>
+    <button id="viewFront" type="button">Blick von vorne</button>
+  </div>
+
+  <aside class="panel">
+    <p class="motion-status" id="motionStatus" role="status"></p>
+
+    <section>
+      <h2>Stromkreis</h2>
+      <button id="powerBtn" class="power" type="button">Strom einschalten</button>
+      <div class="slider">
+        <label class="row" for="currentSlider"><span>Stromstärke I</span> <output id="currentOut"></output></label>
+        <div class="stepper">
+          <button type="button" data-dir="-1" aria-label="Stromstärke verringern">−</button>
+          <input id="currentSlider" type="range" />
+          <button type="button" data-dir="1" aria-label="Stromstärke erhöhen">+</button>
+        </div>
+      </div>
+      <button id="polarityBtn" type="button">Polung umkehren</button>
+      <p class="status" id="polarityStatus"></p>
+    </section>
+
+    <section>
+      <h2>Stator</h2>
+      <div class="segmented" role="group" aria-label="Art des Stators">
+        <button type="button" data-stator="permanent">Permanentmagnet</button>
+        <button type="button" data-stator="elektro">Elektromagnet</button>
+      </div>
+      <button id="magnetBtn" type="button">Magnet umdrehen (N ↔ S)</button>
+      <p class="status" id="magnetStatus"></p>
+      <p class="note" id="statorNote"></p>
+    </section>
+
+    <section>
+      <h2>Bewegung</h2>
+      <button id="playBtn" class="power" type="button">Anhalten</button>
+      <label class="check"><input id="slowCheck" type="checkbox" /> Zeitlupe</label>
+      <div class="button-row">
+        <button id="pushBtn" type="button">Anstoßen</button>
+        <button id="resetBtn" type="button">Zurücksetzen</button>
+      </div>
+      <div class="slider" id="angleBox">
+        <label class="row" for="angleSlider"><span>Drehwinkel (nur angehalten)</span> <output id="angleOut"></output></label>
+        <input id="angleSlider" type="range" />
+      </div>
+    </section>
+
+    <section>
+      <h2>Anzeigen</h2>
+      <label class="check"><input id="polesCheck" type="checkbox" /> Pole (N rot, S grün)</label>
+      <label class="check"><input id="fieldCheck" type="checkbox" /> Magnetfeld des Stators</label>
+      <label class="check"><input id="currentCheck" type="checkbox" /> Stromrichtung</label>
+      <label class="check"><input id="forceCheck" type="checkbox" /> Kräfte auf die Ankerpole</label>
+      <label class="check"><input id="sketchCheck" type="checkbox" /> Schaltskizze</label>
+    </section>
+  </aside>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

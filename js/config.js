@@ -18,6 +18,9 @@ export const MODEL = {
 export const COMMUTATOR = {
   gapHalf: 20 * Math.PI / 180,     // halbe Breite einer Lücke (Lücke insgesamt 40°)
   brushHalf: 10 * Math.PI / 180,   // halbe Breite einer Bürste
+  // Dreipoliger Anker: dreiteiliger Kommutator mit schmalen Lücken; Lage von Segment 0 relativ zu Arm 0
+  threePoleGapHalf: 6 * Math.PI / 180,
+  threePoleOffset: 120 * Math.PI / 180,   // so dreht der Anker in jeder Stellung in dieselbe Richtung
 };
 MODEL.gapAngle = COMMUTATOR.gapHalf - COMMUTATOR.brushHalf;   // 10°: stromlos je ±10° um den Totpunkt
 
@@ -35,7 +38,9 @@ export const GEO = {
   rotorRadius: 4.0,        // Außenradius der Ankerpolschuhe
   shoeThickness: 1.0,      // Dicke der Polschuhe
   shoeHalf: 55 * Math.PI / 180,   // halbe Breite der Statorpole
-  rotorShoeHalf: 30 * Math.PI / 180,   // halbe Breite der Polschuhe des Ankers
+  rotorShoeHalf: 30 * Math.PI / 180,   // halbe Breite der Polschuhe des Doppel-T-Ankers
+  rotorShoeHalf3: 35 * Math.PI / 180,  // halbe Breite der Polschuhe des dreipoligen Ankers
+  barHalf: 3.7,            // Spule mit Eisenkern: halbe Länge des Eisenstabs
   armHeight: 1.6,          // Höhe der Ankerarme (y)
   airGap: 0.35,            // Luftspalt zwischen Anker und Stator
   commZ: 6.3,              // Mitte des Kommutators auf der Achse (z)

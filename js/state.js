@@ -8,6 +8,9 @@ export const state = {
   current: RANGES.current.start,  // Stromstärke in A (Anker; beim Elektromagneten auch in den Feldspulen)
   polarity: 1,                    // +1: Pluspol an der linken Bürste
   stator: 'permanent',            // 'permanent' oder 'elektro'
+  rotor: 'doppelT',               // eingebauter (bzw. zuletzt gewählter) Anker: 'spule', 'doppelT', 'dreipolig'
+  rotorInstalled: true,           // Anker im Motor (sonst in der Ablage)
+  commutatorOn: true,             // Kommutator auf der Welle (sonst abgenommen in der Ablage)
   // Permanentmagnet: +1 Nordpol links (Feld zeigt nach rechts), −1 umgedreht.
   // Elektromagnet: Anschluss der Feldspulen (+1 normal, −1 umgepolt).
   magnet: 1,

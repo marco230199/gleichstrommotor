@@ -1,14 +1,15 @@
 // ------------------------------------------------------------------
-// 3D-Aufbau des Gleichstrommotors: Grundplatte, Lager, Doppel-T-Anker (zwei Spulen mit
-// Eisenkern), Kommutator, Bürsten und Stator (Permanentmagnet oder Elektromagnet mit Feldspulen)
-// sowie die einblendbaren Anzeigen (Feld, Pole, Stromrichtung, Kräfte).
+// 3D-Aufbau des Gleichstrommotors: Grundplatte, Lager, Bürsten und Stator (Permanentmagnet oder
+// Elektromagnet mit Feldspulen) sowie die einblendbaren Anzeigen (Feld, Pole, Stromrichtung, Kräfte).
+// Die austauschbaren Anker mit ihren Kommutatoren stehen in rotoren.js, Ablage und Ein-/Ausbau in teile.js.
 // Koordinaten in cm: Drehachse = z-Achse (zum Betrachter), Statorfeld in x-Richtung.
 // ------------------------------------------------------------------
 import * as THREE from 'three';
 import { GEO, COMMUTATOR } from './config.js';
 import { state } from './state.js';
-import { armatureCurrent, statorField, rotorPole, statorPole, poleForceX, fieldCurrent } from './physik.js';
+import { rotorCurrents, statorField, rotorPole, statorPole, poleForceX, fieldCurrent } from './physik.js';
 import { addMesh, makeTextPlane, makeCable } from './hilfen.js';
+import { rod, arcShell, ring, coil, makeArrow, setArrow } from './bauteile.js';
 import { mat } from './materialien.js';
 import { scene } from './szene.js';
 
@@ -17,145 +18,36 @@ const RR = GEO.rotorRadius, RS = RR + GEO.airGap;
 const CZ = GEO.commZ, CR = GEO.commRadius, CL = GEO.commLength;
 export const BOARD_TOP = GEO.tableY + 1.2;       // Oberkante der Holzgrundplatte
 
-// ---------------- Hilfen
-function rod(p, q, radius, material, parent) {
-  const a = new THREE.Vector3(...p), b = new THREE.Vector3(...q);
-  const mesh = addMesh(new THREE.CylinderGeometry(radius, radius, a.distanceTo(b), 14), material, parent);
-  mesh.position.copy(a).add(b).multiplyScalar(0.5);
-  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
-  return mesh;
-}
-
-/** Kreisringsegment (Winkel in rad, gegen den Uhrzeigersinn ab +x), von z0 bis z0 + depth */
-function arcShell(rIn, rOut, center, half, z0, depth, material, parent) {
-  const shape = new THREE.Shape();
-  shape.absarc(0, 0, rOut, center - half, center + half, false);
-  shape.absarc(0, 0, rIn, center + half, center - half, true);
-  const geo = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 40 });
-  const mesh = addMesh(geo, material, parent);
-  mesh.position.z = z0;
-  return mesh;
-}
-
-/** Voller Kreisring von z0 bis z0 + depth */
-function ring(rIn, rOut, z0, depth, material, parent) {
-  const shape = new THREE.Shape().absarc(0, 0, rOut, 0, 2 * Math.PI);
-  shape.holes.push(new THREE.Path().absarc(0, 0, rIn, 0, 2 * Math.PI, true));
-  const mesh = addMesh(new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 64 }), material, parent);
-  mesh.position.z = z0;
-  return mesh;
-}
-
-/**
- * Spule aus Windungen um einen Kern, dessen Achse in x-Richtung zeigt (Windungen in der y-z-Ebene).
- * x0..x1: Wickelbereich, hy/hz: halbe Kernquerschnitte, layers: Lagen übereinander.
- */
-function coil(x0, x1, hy, hz, layers, parent, material = mat.copper) {
-  const group = new THREE.Group();
-  parent.add(group);
-  const wire = 0.13, pitch = 2 * wire + 0.02;
-  for (let layer = 0; layer < layers; layer++) {
-    const o = 0.2 + wire + layer * pitch;              // Abstand der Windung vom Kern
-    const r = 0.25 + layer * pitch;                    // Eckenrundung
-    const a = hy + o - r, b = hz + o - r;
-    const pts = [];
-    for (let k = 0; k < 4; k++) {                      // abgerundetes Rechteck
-      const cy = k === 0 || k === 3 ? a : -a, cz = k < 2 ? b : -b;
-      for (let j = 0; j <= 6; j++) {
-        const t = (k * Math.PI) / 2 + (j / 6) * (Math.PI / 2);
-        pts.push(new THREE.Vector3(0, cy + r * Math.cos(t), cz + r * Math.sin(t)));
-      }
-    }
-    const shape = new THREE.CatmullRomCurve3(pts, true, 'centripetal');
-    const geo = new THREE.TubeGeometry(shape, 64, wire, 8, true);
-    for (let x = x0 + wire; x <= x1 - wire + 1e-6; x += pitch) {
-      const turn = addMesh(geo, layer % 2 ? mat.copperDark : material, group);
-      turn.position.x = x;
-    }
-  }
-  group.userData.outer = { y: hy + 0.2 + wire + (layers - 1) * pitch, z: hz + 0.2 + wire + (layers - 1) * pitch };
-  return group;
-}
-
-function makeArrow(material, radius = 0.18) {
-  const group = new THREE.Group();
-  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, 1, 12), material);
-  const tip = new THREE.Mesh(new THREE.ConeGeometry(radius * 3, 1, 16), material);
-  group.add(shaft, tip);
-  group.userData = { shaft, tip };
-  return group;
-}
-function setArrow(arrow, length, headLength = 1.0) {
-  const { shaft, tip } = arrow.userData;
-  const shaftLen = Math.max(0.01, length - headLength);
-  shaft.scale.y = shaftLen;
-  shaft.position.y = shaftLen / 2;
-  tip.scale.y = headLength;
-  tip.position.y = shaftLen + headLength / 2;
-}
-
 // ---------------- Grundplatte und Lager
 const board = addMesh(new THREE.BoxGeometry(24, BOARD_TOP - GEO.tableY, 19), mat.wood, scene);
 board.position.set(0, (BOARD_TOP + GEO.tableY) / 2, 2);
+// Lagerböcke hinten und vorne; der vordere lässt sich zum Ein- und Ausbauen zur Seite schieben
+export const frontBearing = new THREE.Group();
+scene.add(frontBearing);
 for (const z of [-5.2, CZ + 2.6]) {
-  const post = addMesh(new THREE.BoxGeometry(1.2, -BOARD_TOP - 0.55, 1.2), mat.plastic, scene);
+  const parent = z > 0 ? frontBearing : scene;
+  const post = addMesh(new THREE.BoxGeometry(1.2, -BOARD_TOP - 0.55, 1.2), mat.plastic, parent);
   post.position.set(0, (BOARD_TOP - 0.55) / 2, z);
-  const eye = addMesh(new THREE.TorusGeometry(0.45, 0.18, 10, 24), mat.plastic, scene);
+  const eye = addMesh(new THREE.TorusGeometry(0.45, 0.18, 10, 24), mat.plastic, parent);
   eye.position.set(0, 0, z);
 }
 
-// ---------------- Anker (dreht sich): Doppel-T-Kern aus Eisen, zwei Spulen, Kommutator
-export const rotor = new THREE.Group();
-scene.add(rotor);
-rod([0, 0, -5.8], [0, 0, CZ + 3.2], 0.22, mat.steel, rotor);
-const hub = addMesh(new THREE.CylinderGeometry(1.0, 1.0, D, 24), mat.ironRotor, rotor);
-hub.rotation.x = Math.PI / 2;
-const ARM_IN = RR - GEO.shoeThickness;             // Arme bis zu den Polschuhen
-const arm = addMesh(new THREE.BoxGeometry(2 * ARM_IN, GEO.armHeight, D), mat.ironRotor, rotor);
-arm.position.z = 0;
-// Polschuhe A (bei phi) und B (gegenüber) mit Frontplatten für die Polfarbe und Farbmarke
-const shoeFront = {};
-for (const [end, center, marker] of [['A', 0, mat.halfA], ['B', Math.PI, mat.halfB]]) {
-  arcShell(ARM_IN, RR, center, GEO.rotorShoeHalf, -ZF, D, mat.ironRotor, rotor);
-  shoeFront[end] = arcShell(ARM_IN + 0.02, RR - 0.02, center, GEO.rotorShoeHalf - 0.02, ZF, 0.12, mat.ironRotor, rotor);
-  arcShell(ARM_IN - 0.35, ARM_IN, center, 0.32, ZF, 0.14, marker, rotor);   // Farbmarke wie die Kommutatorhälfte
-}
-// Spulen auf beiden Armen (in Reihe, gleicher Wickelsinn)
-// Wickelbereich: außerhalb der Nabe (r = 1) und vor der Innenkante der Polschuhe
-const COIL_X = [1.2, 2.55];
-const coilA = coil(COIL_X[0], COIL_X[1], GEO.armHeight / 2, ZF, 2, rotor);
-const coilB = coil(-COIL_X[1], -COIL_X[0], GEO.armHeight / 2, ZF, 2, rotor);
-const OUT = coilA.userData.outer;
-// Verbindung der beiden Spulen hinten (an der Achse vorbei)
-rod([COIL_X[0] + 0.2, 1.05, -OUT.z], [-COIL_X[0] - 0.2, 1.05, -OUT.z], 0.1, mat.copper, rotor);
-// Kommutator: Hälfte A 90° vor Pol A, Lücken in Richtung der Pole
-const GAP = COMMUTATOR.gapHalf;
-const commutator = new THREE.Group();
-rotor.add(commutator);
-arcShell(CR * 0.55, CR, Math.PI / 2, Math.PI / 2 - GAP, CZ - CL / 2, CL, mat.halfA, commutator);
-arcShell(CR * 0.55, CR, -Math.PI / 2, Math.PI / 2 - GAP, CZ - CL / 2, CL, mat.halfB, commutator);
-const commCore = addMesh(new THREE.CylinderGeometry(CR * 0.55, CR * 0.55, CL, 20), mat.plastic, commutator);
-commCore.rotation.x = Math.PI / 2;
-commCore.position.z = CZ;
-// Zuleitungen: Spule A → Hälfte A, Spule B → Hälfte B
-for (const [sx, end] of [[1, 'A'], [-1, 'B']]) {
-  const start = [sx * (COIL_X[0] + 0.4), sx * OUT.y * 0.6, OUT.z];
-  const mid = [sx * 0.9, sx * 1.6, CZ - CL / 2 - 0.9];
-  const endP = [0, sx * CR * 0.8, CZ - CL / 2];
-  makeCable([start, mid, endP], end === 'A' ? mat.halfA : mat.halfB, rotor, -100, 0.09);
-}
-
-// ---------------- Bürsten (feststehend) mit Haltern
-const brushes = {};
+// ---------------- Bürsten mit Haltern
+/**
+ * Bürsten mit Haltern. Jede Gruppe hat ihren Drehpunkt am Fuß des Halters auf der Grundplatte
+ * (dort ist auch das Kabel angeschlossen): rotation.z = −side · Winkel schwenkt die Bürste nach außen.
+ */
+export const brushes = {};
 for (const side of [-1, 1]) {
   const group = new THREE.Group();
-  group.position.z = CZ;
+  group.position.set(side * (CR + 1.4), BOARD_TOP, CZ);
   scene.add(group);
+  const top = -BOARD_TOP;                                   // Höhe der Achse über dem Fuß
   const brush = addMesh(new THREE.BoxGeometry(1.2, 2 * CR * Math.tan(COMMUTATOR.brushHalf), 0.9), mat.carbon, group);
-  brush.position.set(side * (CR + 0.6), 0, 0);
-  const holder = addMesh(new THREE.BoxGeometry(0.3, -BOARD_TOP, 0.3), mat.steel, group);
-  holder.position.set(side * (CR + 1.4), BOARD_TOP / 2, 0);
-  rod([side * (CR + 1.2), 0, 0], [side * (CR + 1.4), 0, 0], 0.15, mat.steel, group);
+  brush.position.set(-side * 0.8, top, 0);
+  const holder = addMesh(new THREE.BoxGeometry(0.3, top, 0.3), mat.steel, group);
+  holder.position.set(0, top / 2, 0);
+  rod([-side * 0.2, top, 0], [0, top, 0], 0.15, mat.steel, group);
   brushes[side] = group;
 }
 /** Fußpunkt eines Bürstenhalters auf der Grundplatte, side −1 links, +1 rechts */
@@ -262,36 +154,41 @@ const fieldLabel = makeTextPlane('B', 1.3, { color: '#1e88e5' });
 fieldLabel.position.set(RS - 1.2, 4.1, ZF + 1.4);
 fieldGroup.add(fieldLabel);
 
-// Pole des Ankers als Buchstaben (stehen immer aufrecht)
-const rotorLabels = {};
-for (const end of ['A', 'B']) {
-  rotorLabels[end] = { N: makeTextPlane('N', 1.2, { color: '#ffffff' }), S: makeTextPlane('S', 1.2, { color: '#ffffff' }) };
-  for (const l of Object.values(rotorLabels[end])) { l.renderOrder = 6; scene.add(l); }
+// Pole des Ankers als Buchstaben (stehen immer aufrecht), für bis zu drei Arme
+const MAX_ARMS = 3;
+const rotorLabels = [];
+for (let k = 0; k < MAX_ARMS; k++) {
+  rotorLabels.push({ N: makeTextPlane('N', 1.2, { color: '#ffffff' }), S: makeTextPlane('S', 1.2, { color: '#ffffff' }) });
+  for (const l of Object.values(rotorLabels[k])) { l.renderOrder = 6; scene.add(l); }
 }
 
-// Stromrichtung: wandernde Spitzen auf der Vorderseite der Ankerspulen
+// Stromrichtung: wandernde Spitzen auf der Vorderseite der Ankerspulen (in Weltkoordinaten)
 const currentMarks = [];
-for (const sx of [1, -1]) {
-  for (let k = 0; k < 3; k++) {
-    const cone = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.8, 12), mat.current);
-    cone.position.set(sx * (COIL_X[0] + COIL_X[1]) / 2, 0, OUT.z + 0.25);
-    rotor.add(cone);
-    currentMarks.push(cone);
-  }
+for (let k = 0; k < 3 * 4; k++) {
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.8, 12), mat.current);
+  scene.add(cone);
+  currentMarks.push(cone);
 }
 
 // Kräfte auf die Ankerpole (Polmodell): waagrecht, in Weltkoordinaten
-const forceArrows = { A: makeArrow(mat.force, 0.2), B: makeArrow(mat.force, 0.2) };
-const forceLabels = { A: makeTextPlane('F', 1.2, { color: '#7b1fa2' }), B: makeTextPlane('F', 1.2, { color: '#7b1fa2' }) };
-for (const end of ['A', 'B']) scene.add(forceArrows[end], forceLabels[end]);
+const forceArrows = [], forceLabels = [];
+for (let k = 0; k < MAX_ARMS; k++) {
+  forceArrows.push(makeArrow(mat.force, 0.2));
+  forceLabels.push(makeTextPlane('F', 1.2, { color: '#7b1fa2' }));
+  scene.add(forceArrows[k], forceLabels[k]);
+}
 
 // ---------------- Abgleich mit dem Zustand (jedes Bild)
 // Polfarbe; ohne Pol (oder ohne Polanzeige) die Eisenfarbe des Teils
 const poleMat = (pole, iron) => (pole === 'N' ? mat.north : pole === 'S' ? mat.south : iron);
 let flow = 0;
-export function syncApparatus(dt) {
+
+/**
+ * rotor: der eingebaute Anker aus teile.js (oder null, wenn keiner eingebaut ist bzw. gerade bewegt wird).
+ * Seine Drehung setzt teile.js; hier werden Pole, Stromrichtung und Kräfte angezeigt.
+ */
+export function syncApparatus(dt, rotor) {
   const phi = state.phi;
-  rotor.rotation.z = phi;
   const elektro = state.stator === 'elektro';
   permanent.visible = !elektro;
   electro.visible = elektro;
@@ -310,19 +207,6 @@ export function syncApparatus(dt) {
     }
   }
 
-  // Anker: Pole (Farbe der Polschuhe vorne und aufrechte Buchstaben)
-  const i = armatureCurrent(phi, state).armature;
-  for (const end of ['A', 'B']) {
-    const pole = rotorPole(end, phi, state);
-    shoeFront[end].material = state.showPoles ? poleMat(pole, mat.ironRotor) : mat.ironRotor;
-    const a = phi + (end === 'A' ? 0 : Math.PI), r = (ARM_IN + RR) / 2;
-    for (const p of ['N', 'S']) {
-      const label = rotorLabels[end][p];
-      label.visible = state.showPoles && pole === p;
-      label.position.set(r * Math.cos(a), r * Math.sin(a), ZF + 0.2);
-    }
-  }
-
   // Feldlinien: von N nach S, Dichte (Deckkraft) nach Feldstärke
   const b = statorField(state);
   fieldGroup.visible = state.showField && b !== 0;
@@ -330,30 +214,47 @@ export function syncApparatus(dt) {
   fieldMat.opacity = 0.25 + 0.4 * Math.min(1, Math.abs(b));
   fieldLabel.rotation.y = b > 0 ? 0 : Math.PI;                     // Beschriftung nicht spiegeln
 
-  // Stromrichtung in den Ankerspulen: vorne bei positivem Strom in −y (Anker-Koordinaten)
+  // Anker: Pole (Farbe der Polflächen und aufrechte Buchstaben), Stromrichtung, Kräfte
+  const arms = rotor ? rotor.arms : [];
+  const armDefs = rotor ? rotor.def.arms : [];
+  const coils = rotor ? rotorCurrents(phi, state).coils : [];
+  for (let k = 0; k < MAX_ARMS; k++) {
+    const arm = arms[k], def = armDefs[k];
+    const pole = arm ? rotorPole(k, phi, state) : null;
+    if (arm) arm.front.material = state.showPoles ? poleMat(pole, mat.ironRotor) : mat.ironRotor;
+    const a = def ? phi + def.angle : 0;
+    for (const p of ['N', 'S']) {
+      const label = rotorLabels[k][p];
+      label.visible = !!arm && state.showPoles && pole === p;
+      if (label.visible) label.position.set(arm.labelR * Math.cos(a), arm.labelR * Math.sin(a), ZF + 0.2);
+    }
+    const f = arm ? poleForceX(k, phi, state) : 0;
+    const arrow = forceArrows[k], flabel = forceLabels[k];
+    arrow.visible = flabel.visible = !!arm && state.showForces && f !== 0;
+    if (arrow.visible) {
+      const x = arm.tipR * Math.cos(a), y = arm.tipR * Math.sin(a);
+      const len = 1.6 + 1.6 * Math.min(2, Math.abs(f) / 3);
+      setArrow(arrow, len, 0.8);
+      arrow.rotation.z = f > 0 ? -Math.PI / 2 : Math.PI / 2;
+      arrow.position.set(x, y, ZF + 0.9);
+      flabel.position.set(x + Math.sign(f) * (len + 0.7), y + 0.6, ZF + 0.9);
+    }
+  }
+
+  // Stromrichtung in den Ankerspulen: vorne bei positivem Strom in −y (Koordinaten des Spulenpakets)
   flow += dt * 1.6;
+  const packs = rotor ? rotor.packs : [];
   for (const [k, cone] of currentMarks.entries()) {
-    cone.visible = state.showCurrent && i !== 0;
+    const pack = packs[Math.floor(k / 3)];
+    const i = pack ? coils[pack.coil] : 0;
+    cone.visible = !!pack && state.showCurrent && Math.abs(i) > 1e-9;
     if (!cone.visible) continue;
     const t = (flow + (k % 3) / 3) % 1;
     const dir = -Math.sign(i);
-    cone.position.y = dir * (-OUT.y + t * 2 * OUT.y);
-    cone.rotation.z = dir > 0 ? 0 : Math.PI;                      // Kegel zeigt entlang +y bzw. −y
-  }
-
-  // Kräfte auf die Ankerpole
-  for (const end of ['A', 'B']) {
-    const f = poleForceX(end, phi, state);
-    const arrow = forceArrows[end], label = forceLabels[end];
-    arrow.visible = label.visible = state.showForces && f !== 0;
-    if (!arrow.visible) continue;
-    const a = phi + (end === 'A' ? 0 : Math.PI);
-    const x = RR * Math.cos(a), y = RR * Math.sin(a);
-    const len = 1.6 + 1.6 * Math.min(2, Math.abs(f) / 3);
-    setArrow(arrow, len, 0.8);
-    arrow.rotation.z = f > 0 ? -Math.PI / 2 : Math.PI / 2;
-    arrow.position.set(x, y, ZF + 0.9);
-    label.position.set(x + Math.sign(f) * (len + 0.7), y + 0.6, ZF + 0.9);
+    const lx = (pack.x0 + pack.x1) / 2, ly = dir * (-pack.out.y + t * 2 * pack.out.y);
+    const a = phi + pack.frame;
+    cone.position.set(lx * Math.cos(a) - ly * Math.sin(a), lx * Math.sin(a) + ly * Math.cos(a), pack.out.z + 0.25);
+    cone.rotation.z = a + (dir > 0 ? 0 : Math.PI);                 // Kegel zeigt entlang ±y des Pakets
   }
 
   // Feldstrom anzeigen: Feldspulen nur beim Elektromagneten

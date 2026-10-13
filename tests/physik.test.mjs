@@ -95,3 +95,54 @@ test('Totpunkt: Steht der Anker auf der Lücke, läuft er ohne Anstoßen nicht a
   assert.equal(s.omega, 0);
   assert.ok(MODEL.gapAngle > 0);
 });
+
+// ---------------- Anker zum Austauschen, Kommutator abnehmen, Anker ausbauen
+import { ROTORS, rotorCurrents } from '../js/physik.js';
+
+test('Spule mit Eisenkern: wie der Doppel-T-Anker (Totpunkt), nur schwächer', () => {
+  const sp = base({ rotor: 'spule' }), dt = base({ rotor: 'doppelT' });
+  assert.equal(rotorPole('A', deg(60), sp), 'N');
+  assert.ok(armatureCurrent(deg(3), sp).gap, 'Totpunkt');
+  const ratio = torque(deg(60), sp) / torque(deg(60), dt);
+  assert.ok(ratio > 0 && ratio < 1, 'gleiche Richtung, kleineres Drehmoment');
+});
+
+test('Dreipoliger Anker: kein Totpunkt – Drehmoment in jeder Stellung gleich gerichtet und nie null', () => {
+  for (const extra of [{}, { stator: 'elektro' }]) {
+    const s = base({ rotor: 'dreipolig', ...extra });
+    for (let p = 0; p < 360; p += 1) {
+      const t = torque(deg(p), s);
+      assert.ok(t < -10 * MODEL.staticFriction, `${p}°: kräftig im Uhrzeigersinn`);
+      assert.equal(armatureCurrent(deg(p), s).gap, false);
+    }
+  }
+});
+
+test('Dreipoliger Anker: Strom teilt sich auf (2/3 durch eine Spule, je 1/3 durch die beiden anderen)', () => {
+  const s = base({ rotor: 'dreipolig' });
+  const r = rotorCurrents(deg(37), s);
+  const mags = r.coils.map(Math.abs).sort((a, b) => a - b);
+  assert.ok(Math.abs(mags[0] - 1) < 1e-6 && Math.abs(mags[1] - 1) < 1e-6 && Math.abs(mags[2] - 2) < 1e-6, mags.join(', '));
+  assert.equal(r.armature, 3, 'durch die Bürsten fließt die eingestellte Stromstärke');
+  assert.equal(ROTORS.dreipolig.arms.length, 3);
+});
+
+test('Dreipoliger Anker läuft aus dem Stand an, auch dort, wo der Doppel-T-Anker im Totpunkt steht', () => {
+  const s = base({ rotor: 'dreipolig', phi: 0 });
+  step(s, 2);
+  assert.ok(s.omega < -1);
+  const d = base({ rotor: 'doppelT', phi: 0 });
+  step(d, 2);
+  assert.equal(d.omega, 0);
+});
+
+test('Ohne Kommutator oder ohne Anker fließt kein Ankerstrom und es gibt kein Drehmoment', () => {
+  for (const extra of [{ commutatorOn: false }, { rotorInstalled: false }]) {
+    const s = base(extra);
+    assert.equal(armatureCurrent(deg(60), s).armature, 0);
+    assert.equal(torque(deg(60), s), 0);
+    step(s, 1);
+    assert.equal(s.omega, 0);
+  }
+  assert.equal(statorPole(-1, base({ stator: 'elektro', commutatorOn: false })), 'N', 'Feldspulen bleiben unter Strom');
+});

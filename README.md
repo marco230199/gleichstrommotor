@@ -1,8 +1,13 @@
 # Gleichstrommotor
 
-3D-Simulation eines einfachen Gleichstrommotors für den Physikunterricht. Der **Anker** ist ein
-Doppel-T-Anker: zwei Spulen auf einem Eisenkern, wie bei den üblichen Motormodellen der Lehrmittel.
-Fließt Strom, wird der Anker zum Elektromagneten. Der **Stator** lässt sich als
+3D-Simulation eines einfachen Gleichstrommotors für den Physikunterricht. Der **Anker** besteht aus
+Spulen mit Eisenkern; fließt Strom, wird er zum Elektromagneten. Drei Anker stehen zur Auswahl und
+lassen sich wie bei einem Baukasten austauschen:
+
+- **Spule mit Eisenkern:** ein Eisenstab mit einer Spule – der Übergang von der Leiterschleife
+- **Doppel-T-Anker:** zwei Spulen in Reihe, Polschuhe – wie bei den üblichen Lehrmittel-Motormodellen
+- **Dreipoliger Anker:** drei Spulen, dreiteiliger Kommutator – **kein Totpunkt**, läuft aus jeder Stellung an
+ Der **Stator** lässt sich als
 **Permanentmagnet** oder als **Elektromagnet** (Feldspulen auf Eisenkernen) darstellen.
 
 Erklärt wird im **Polmodell**: Gleichnamige Pole stoßen sich ab, ungleichnamige ziehen sich an.
@@ -18,6 +23,13 @@ Aufbau und Bedienung entsprechen der Simulation „Leiterschleife im Magnetfeld�
 ## Funktionen
 
 - **Stromkreis:** Strom ein/aus, Stromstärke 0–5 A, Polung umkehren
+- **Anker austauschen:** Auswahl Spule / Doppel-T / Dreipolig. Die Anker, die nicht eingebaut sind, liegen
+  links neben dem Motor in einer Ablage. Beim Tausch schwenken die Bürsten nach außen, der vordere
+  Lagerbock fährt zur Seite, der alte Anker wird herausgezogen und abgelegt, der neue eingesetzt
+  (animiert). „Anker herausnehmen“ lässt den Motor leer.
+- **Kommutator abnehmen:** Der Kommutator lässt sich von der Welle ziehen und wieder aufsetzen; abgenommen
+  liegt er in der Ablage. Dann berühren die Bürsten nichts, der Anker ist stromlos – und der Blick auf
+  Anker, Spulen und Anschlüsse ist frei. Zum Tauschen des Ankers muss der Kommutator aufgesetzt sein.
 - **Stator:** Permanentmagnet oder Elektromagnet
   - Permanentmagnet: „Magnet umdrehen (N ↔ S)“
   - Elektromagnet: Die Feldspulen hängen **parallel zum Anker** am selben Netzgerät (Nebenschluss).
@@ -39,8 +51,14 @@ Aufbau und Bedienung entsprechen der Simulation „Leiterschleife im Magnetfeld�
 
 ## Modell
 
-- Drehmoment im Polmodell: τ = −K · I_Anker · B · sin φ (φ: Winkel des gold markierten Ankerpols A
-  gegen die Waagrechte). Der Kommutator macht daraus ein Drehmoment mit immer gleichem Vorzeichen.
+- Jeder Anker ist in `js/physik.js` (`ROTORS`) beschrieben: Kommutatorsegmente (Zahl, Lage, Lücken),
+  Spulen (zwischen welchen Segmenten, Richtung ihrer Magnetisierung) und Arme mit ihren Polen.
+- Aus den Segmenten, die die Bürsten gerade berühren, wird der Strom in jeder Spule berechnet
+  (Spulen gleich groß). Beim dreipoligen Anker teilt er sich auf: eine Spule 2/3, die beiden anderen
+  je 1/3. Überbrückt eine Bürste zwei Segmente, ist die Spule dazwischen kurz stromlos.
+- Drehmoment im Polmodell: τ = −K · f · B · Σ I_Spule · sin(φ + Spulenwinkel) (φ: Ankerwinkel).
+  Der Kommutator macht daraus ein Drehmoment mit immer gleichem Vorzeichen. Die Spule mit Eisenkern
+  (ohne Polschuhe) hat den Faktor f = 0,75, die anderen f = 1.
 - Permanentmagnet: B = ±1 (relativ). Elektromagnet: B proportional zum Feldstrom; bei 3 A ist das
   Feld so stark wie beim Permanentmagneten. Beim Elektromagneten wächst das Drehmoment deshalb mit I².
 - Vereinfachungen: Ankerstrom und Feldstrom sind beide gleich der eingestellten Stromstärke I;
@@ -64,7 +82,8 @@ npm test
 ```
 
 Die Tests prüfen die Physik ohne Browser (Kommutator, Pole, Drehrichtungen beim Umpolen,
-Totpunkt, Dauerlauf).
+Totpunkt, Dauerlauf, die drei Anker, Stromaufteilung beim dreipoligen Anker, abgenommener Kommutator
+und ausgebauter Anker).
 
 ## Dateien
 
@@ -74,10 +93,13 @@ Totpunkt, Dauerlauf).
 ├── js/
 │   ├── main.js         # Start und Render-Schleife
 │   ├── config.js       # Modellgrößen, Reglerbereiche, 3D-Maße
-│   ├── state.js        # Zustand (Strom, Polung, Stator, Winkel, Anzeigen, …)
+│   ├── state.js        # Zustand (Strom, Polung, Stator, Anker, Kommutator, Winkel, Anzeigen, …)
 │   ├── physik.js       # Ankerstrom, Feld, Pole, Drehmoment, Bewegung (ohne 3D, testbar)
 │   ├── szene.js        # Renderer, Kamera, Licht, Tisch
-│   ├── aufbau.js       # Grundplatte, Anker, Kommutator, Bürsten, Statoren, Anzeigen
+│   ├── aufbau.js       # Grundplatte, Lager, Bürsten, Statoren, Anzeigen
+│   ├── rotoren.js      # die drei Anker als 3D-Bauteile, je mit abnehmbarem Kommutator
+│   ├── teile.js        # Teileablage, Ein- und Ausbau von Anker und Kommutator (Animation)
+│   ├── bauteile.js     # Geometrie-Helfer (Kreisringsegment, Spule, Pfeil, …)
 │   ├── netzgeraet.js   # Netzgerät mit Stromanzeige und Kabeln (Anker, Feldspulen)
 │   ├── schaltskizze.js # 2D-Schaltskizze im Blick entlang der Achse
 │   ├── bedienfeld.js   # Regler, Knöpfe, Statusanzeigen

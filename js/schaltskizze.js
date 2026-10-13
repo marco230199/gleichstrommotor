@@ -1,19 +1,20 @@
 // ------------------------------------------------------------------
 // Schaltskizze: Blick entlang der Drehachse (von vorne, wie die Kamera „Blick von vorne“)
-// Stator (Magnetschalen oder Polkerne mit Feldspulen), mitdrehender Doppel-T-Anker mit Polen,
-// Kommutator, Bürsten, Schalter und Batterie. Beim Elektromagneten liegen die Feldspulen
+// Stator (Magnetschalen oder Polkerne mit Feldspulen), mitdrehender Anker (Spule mit Eisenkern,
+// Doppel-T-Anker oder dreipoliger Anker) mit Polen, Kommutator, Bürsten, Schalter und Batterie. Beim Elektromagneten liegen die Feldspulen
 // parallel zum Anker an der Batterie.
 // ------------------------------------------------------------------
 import { state } from './state.js';
-import { armatureCurrent, fieldCurrent, statorField, rotorPole, statorPole, poleForceX } from './physik.js';
+import { armatureCurrent, rotorCurrents, rotorOf, segmentCenter, fieldCurrent, statorField, rotorPole, statorPole, poleForceX } from './physik.js';
 import { COMMUTATOR, GEO } from './config.js';
-import { COLOR_A, COLOR_B, COLOR_N, COLOR_S } from './materialien.js';
+import { COLOR_A, COLOR_B, COLOR_C, COLOR_N, COLOR_S } from './materialien.js';
 
 const $ = id => document.getElementById(id);
 const INK = '#33404d', IRON = '#6b737c', IRON_DARK = '#4f565e', IRON_ROTOR = '#c9d0d8', COPPER = '#c46a2b';
 const CURRENT = '#f57c00', FORCE = '#7b1fa2', FIELD = 'rgba(30, 136, 229, 0.45)';
 // Polfarbe; ohne Pol die Eisenfarbe des Teils (Stator dunkler, Anker heller)
 const poleColor = (p, iron = IRON) => (p === 'N' ? COLOR_N : p === 'S' ? COLOR_S : iron);
+const SEGMENT_COLORS = [COLOR_A, COLOR_B, COLOR_C];
 
 function arrowHead(ctx, x, y, angle, size = 9) {
   ctx.beginPath();
@@ -125,57 +126,89 @@ export function drawSketch() {
     }
   }
 
-  // ---------------- Anker (Doppel-T): Arm, Spulen, Polschuhe mit Polen
+  // ---------------- Anker: Eisenkern, Spulen, Polflächen mit Polen (nur wenn eingebaut)
   const ang = -phi;                               // Canvas: y nach unten
-  const ux = Math.cos(ang), uy = Math.sin(ang);
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.rotate(ang);
-  ctx.fillStyle = IRON_ROTOR;
-  ctx.fillRect(-shoeIn, -GEO.armHeight * k / 2, 2 * shoeIn, GEO.armHeight * k);
-  ctx.beginPath(); ctx.arc(0, 0, 1.0 * k, 0, 2 * Math.PI); ctx.fill();
-  // Spulen auf den Armen
-  ctx.fillStyle = COPPER;
-  for (const s of [1, -1]) {
-    const x0 = s > 0 ? 1.25 * k : -2.55 * k;
-    ctx.fillRect(x0, -1.4 * k, 1.3 * k, 2.8 * k);
-  }
-  ctx.restore();
-  for (const [end, color] of [['A', COLOR_A], ['B', COLOR_B]]) {
-    const pole = rotorPole(end, phi, state);
-    const c = ang + (end === 'A' ? 0 : Math.PI);
-    arcBand(ctx, cx, cy, shoeIn, rr, c, rotorHalf, state.showPoles ? poleColor(pole, IRON_ROTOR) : IRON_ROTOR);
-    arcBand(ctx, cx, cy, shoeIn - 1.2 * u, shoeIn, c, 0.3, color);      // Farbmarke wie die Kommutatorhälfte
-    if (state.showPoles && pole) letter(ctx, pole, cx + (shoeIn + rr) / 2 * Math.cos(c), cy + (shoeIn + rr) / 2 * Math.sin(c), 4.5 * u);
-  }
-
-  // Kräfte auf die Ankerpole (waagrecht: Nordpol in Feldrichtung, Südpol entgegen)
-  if (state.showForces) {
-    for (const end of ['A', 'B']) {
-      const f = poleForceX(end, phi, state);
-      if (f === 0) continue;
-      const s = end === 'A' ? 1 : -1;
-      const px = cx + s * rr * ux, py = cy + s * rr * uy;
-      const len = (7 + 5 * Math.min(2, Math.abs(f) / 3)) * u, dir = Math.sign(f);
-      ctx.strokeStyle = ctx.fillStyle = FORCE;
-      ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + dir * len, py); ctx.stroke();
-      arrowHead(ctx, px + dir * (len + 4), py, dir > 0 ? 0 : Math.PI, 10);
+  const rotor = rotorOf(state);
+  const armGeo = [];                              // je Arm: Winkel (Canvas), Radius für Buchstaben und Kraft
+  if (state.rotorInstalled) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(ang);
+    if (state.rotor === 'spule') {
+      const B = GEO.barHalf * k, END = 0.75 * k, h = GEO.armHeight * k;
+      ctx.fillStyle = IRON_ROTOR;
+      ctx.fillRect(-B + END, -h / 2, 2 * (B - END), h);
+      ctx.fillStyle = COPPER;
+      ctx.fillRect(-(B - END - 0.4 * k), -1.4 * k, 2 * (B - END - 0.4 * k), 2.8 * k);
+      rotor.arms.forEach((arm, j) => {
+        const pole = rotorPole(j, phi, state);
+        ctx.fillStyle = state.showPoles ? poleColor(pole, IRON_ROTOR) : IRON_ROTOR;
+        ctx.fillRect(j === 0 ? B - END : -B, -h / 2, END, h);
+        ctx.fillStyle = SEGMENT_COLORS[j];                                 // Farbmarke wie die Kommutatorhälfte
+        ctx.fillRect(j === 0 ? B - END - 0.3 * k : -B + END, -h * 0.35, 0.3 * k, h * 0.7);
+        armGeo.push({ c: ang - arm.angle, labelR: B - END / 2, tipR: B, pole });
+      });
+    } else {
+      const three = state.rotor === 'dreipolig';
+      const h = (three ? 1.4 : GEO.armHeight) * k, shoeHalf = three ? GEO.rotorShoeHalf3 : GEO.rotorShoeHalf;
+      ctx.fillStyle = IRON_ROTOR;
+      ctx.beginPath(); ctx.arc(0, 0, 1.0 * k, 0, 2 * Math.PI); ctx.fill();
+      for (const arm of rotor.arms) {
+        ctx.save();
+        ctx.rotate(-arm.angle);
+        ctx.fillStyle = IRON_ROTOR;
+        ctx.fillRect(0.6 * k, -h / 2, shoeIn - 0.6 * k, h);
+        ctx.fillStyle = COPPER;
+        if (three) ctx.fillRect(1.15 * k, -1.2 * k, 1.35 * k, 2.4 * k);
+        else ctx.fillRect(1.25 * k, -1.4 * k, 1.3 * k, 2.8 * k);
+        ctx.restore();
+      }
+      ctx.restore();
+      ctx.save();
+      rotor.arms.forEach((arm, j) => {
+        const pole = rotorPole(j, phi, state);
+        const c = ang - arm.angle;
+        arcBand(ctx, cx, cy, shoeIn, rr, c, shoeHalf, state.showPoles ? poleColor(pole, IRON_ROTOR) : IRON_ROTOR);
+        if (!three) arcBand(ctx, cx, cy, shoeIn - 1.2 * u, shoeIn, c, 0.3, SEGMENT_COLORS[j]);   // Farbmarke
+        armGeo.push({ c, labelR: (shoeIn + rr) / 2, tipR: rr, pole });
+      });
+    }
+    ctx.restore();
+    for (const g of armGeo) {
+      if (state.showPoles && g.pole) letter(ctx, g.pole, cx + g.labelR * Math.cos(g.c), cy + g.labelR * Math.sin(g.c), 4.5 * u);
+    }
+    // Kräfte auf die Ankerpole (waagrecht: Nordpol in Feldrichtung, Südpol entgegen)
+    if (state.showForces) {
+      armGeo.forEach((g, j) => {
+        const f = poleForceX(j, phi, state);
+        if (f === 0) return;
+        const px = cx + g.tipR * Math.cos(g.c), py = cy + g.tipR * Math.sin(g.c);
+        const len = (7 + 5 * Math.min(2, Math.abs(f) / 3)) * u, dir = Math.sign(f);
+        ctx.strokeStyle = ctx.fillStyle = FORCE;
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + dir * len, py); ctx.stroke();
+        arrowHead(ctx, px + dir * (len + 4), py, dir > 0 ? 0 : Math.PI, 10);
+      });
     }
   }
 
-  // ---------------- Kommutator und Bürsten (vorne)
+  // ---------------- Kommutator (wenn aufgesetzt) und Bürsten (vorne)
   const rc = 6 * u;
-  const gap = COMMUTATOR.gapHalf;
-  for (const [center, color] of [[ang - Math.PI / 2, COLOR_A], [ang + Math.PI / 2, COLOR_B]]) {
-    ctx.strokeStyle = color;
+  if (state.rotorInstalled && state.commutatorOn) {
+    const n = rotor.segments, segHalf = Math.PI / n - rotor.gapHalf;
     ctx.lineWidth = 4 * u;
     ctx.lineCap = 'butt';
-    ctx.beginPath(); ctx.arc(cx, cy, rc - 2 * u, center - Math.PI / 2 + gap, center + Math.PI / 2 - gap); ctx.stroke();
+    for (let s2 = 0; s2 < n; s2++) {
+      const center = -segmentCenter(rotor, s2, phi);
+      ctx.strokeStyle = SEGMENT_COLORS[s2];
+      ctx.beginPath(); ctx.arc(cx, cy, rc - 2 * u, center - segHalf, center + segHalf); ctx.stroke();
+    }
+    ctx.lineCap = 'round';
   }
-  ctx.lineCap = 'round';
-  ctx.fillStyle = '#5b636c';
-  ctx.beginPath(); ctx.arc(cx, cy, 1.4 * u, 0, 2 * Math.PI); ctx.fill();
+  if (state.rotorInstalled) {
+    ctx.fillStyle = '#5b636c';
+    ctx.beginPath(); ctx.arc(cx, cy, 1.4 * u, 0, 2 * Math.PI); ctx.fill();
+  }
   const bw = 4 * u, bh = 2 * rc * Math.tan(COMMUTATOR.brushHalf);
   ctx.fillStyle = '#333';
   ctx.fillRect(cx - rc - bw + 0.5 * u, cy - bh / 2, bw, bh);
@@ -268,6 +301,9 @@ export function drawSketch() {
 /** Kurzer Text zu Bürsten, Kommutator und Feld */
 export function sketchStatus() {
   const i = armatureCurrent(state.phi, state);
+  const field = state.stator === 'elektro' ? ' Die Feldspulen liegen parallel zum Anker.' : '';
+  if (!state.rotorInstalled) return 'Kein Anker eingebaut: Zwischen den Bürsten ist der Stromkreis offen.' + field;
+  if (!state.commutatorOn) return 'Kommutator abgenommen: Die Bürsten berühren nichts, der Ankerstromkreis ist offen.' + field;
   if (!state.powerOn) return 'Schalter offen: Es fließt kein Strom.';
   if (state.current === 0) return 'Die Stromstärke ist null.';
   if (i.gap) {
@@ -275,8 +311,14 @@ export function sketchStatus() {
       ? 'Totpunkt: Die Bürsten liegen auf den Lücken, der Anker ist stromlos. Er dreht durch seinen Schwung weiter.'
       : 'Totpunkt: Die Bürsten liegen auf den Lücken, der Anker ist stromlos. Ohne Schwung bleibt er stehen.';
   }
+  if (rotorOf(state).segments === 3) {
+    const r = rotorCurrents(state.phi, state);
+    const bridge = r.left.length > 1 || r.right.length > 1;
+    return (bridge
+      ? 'Eine Bürste berührt gerade zwei Segmente – die Spule dazwischen ist kurz stromlos.'
+      : 'Dreiteiliger Kommutator: Der Strom teilt sich auf – eine Spule führt 2/3, die beiden anderen je 1/3.') + field;
+  }
   const left = i.leftBrush === 'A' ? 'goldenen' : 'türkisen';
   const right = i.leftBrush === 'A' ? 'türkisen' : 'goldenen';
-  const field = state.stator === 'elektro' ? ' Die Feldspulen liegen parallel zum Anker.' : '';
   return `Linke Bürste an der ${left} Hälfte, rechte Bürste an der ${right} Hälfte.${field}`;
 }

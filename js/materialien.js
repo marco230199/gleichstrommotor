@@ -6,6 +6,7 @@ import * as THREE from 'three';
 // Farben der beiden Kommutatorhälften und der zugehörigen Ankerpole (auch in der Schaltskizze)
 export const COLOR_A = '#e0a526';   // gold
 export const COLOR_B = '#26a69a';   // türkis
+export const COLOR_C = '#8e6bbf';   // violett (drittes Segment beim dreipoligen Anker)
 // Pole: Nordpol rot, Südpol grün
 export const COLOR_N = '#d32f2f';
 export const COLOR_S = '#2e7d32';
@@ -26,6 +27,7 @@ export const mat = {
   carbon: new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.6 }),
   halfA: new THREE.MeshStandardMaterial({ color: COLOR_A, metalness: 0.7, roughness: 0.35 }),
   halfB: new THREE.MeshStandardMaterial({ color: COLOR_B, metalness: 0.5, roughness: 0.35 }),
+  halfC: new THREE.MeshStandardMaterial({ color: COLOR_C, metalness: 0.5, roughness: 0.35 }),
   cableRed: new THREE.MeshStandardMaterial({ color: 0xc62828, roughness: 0.5 }),
   cableBlue: new THREE.MeshStandardMaterial({ color: 0x1e5bc6, roughness: 0.5 }),
   cableBlack: new THREE.MeshStandardMaterial({ color: 0x1c1c1c, roughness: 0.5 }),

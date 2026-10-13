@@ -2,29 +2,122 @@
 // Physik des Gleichstrommotors im Polmodell (ohne 3D, testbar mit node --test)
 //
 // Blick von vorne entlang der Drehachse (z zeigt zum Betrachter), Statorfeld in x-Richtung.
-// Der Anker ist ein Elektromagnet: Seine Pole A (gold) und B (türkis) liegen beim Winkel phi
-// bzw. phi + 180°. Ankerstrom positiv: Pol A wird zum Nordpol.
-// Drehmoment des Ankermagneten im Statorfeld: τ = m × B, also τ = −K · I_A · B_x · sin(phi).
+// Der Anker ist ein Elektromagnet aus einer oder mehreren Spulen. Jede Spule magnetisiert ihren
+// Eisenkern in eine feste Richtung (Winkel im Anker); Strom positiv → Moment in diese Richtung.
+// Drehmoment im Statorfeld: τ = Σ m × B, also τ = −K · f · B_x · Σ i_Spule · sin(phi + Winkel).
+//
+// Die Anker unterscheiden sich durch ihren Kommutator (Zahl der Segmente) und ihre Spulen:
+//   spule     – Eisenstab mit einer Spule, zweiteiliger Kommutator (Übergang von der Leiterschleife)
+//   doppelT   – Doppel-T-Anker: zwei Spulen in Reihe, Polschuhe, zweiteiliger Kommutator
+//   dreipolig – drei Arme mit je einer Spule (Dreieckschaltung), dreiteiliger Kommutator: kein Totpunkt
 // ------------------------------------------------------------------
-import { MODEL } from './config.js';
+import { MODEL, COMMUTATOR } from './config.js';
+
+const TAU = 2 * Math.PI;
 
 /**
- * Strom im Anker und Kontakt der Bürsten (Kommutator).
- * Die Kommutatorhälfte A ist mit Pol A verbunden und liegt 90° vor ihm (bei phi + 90°).
- * Bürsten links und rechts; die linke ist bei polarity = +1 der Pluspol.
- * Liegen die Bürsten auf den Lücken (Anker waagrecht, Pole gegenüber den Statorpolen: Totpunkt),
- * ist der Ankerstromkreis unterbrochen.
- * @returns {{ armature: number, gap: boolean, leftBrush: 'A'|'B'|null }}
+ * Beschreibung der Anker.
+ * segments: Zahl der Kommutatorsegmente; segOffset: Lage von Segment 0 relativ zum Anker (rad);
+ * gapHalf: halbe Lücke zwischen den Segmenten.
+ * coils: Spulen zwischen Segment a und b; Strom von a nach b magnetisiert in Richtung angle.
+ * arms: Arme/Enden des Eisenkerns mit Pol: Winkel, zugehörige Spule und Vorzeichen (+1: Nordpol bei positivem Strom).
+ */
+export const ROTORS = {
+  spule: {
+    name: 'Spule mit Eisenkern',
+    segments: 2, segOffset: Math.PI / 2, gapHalf: COMMUTATOR.gapHalf,
+    coils: [{ a: 0, b: 1, angle: 0 }],
+    arms: [{ angle: 0, coil: 0, sign: 1 }, { angle: Math.PI, coil: 0, sign: -1 }],
+    torqueFactor: 0.75,          // ohne Polschuhe: schwächere Kopplung an das Statorfeld
+    deadPoint: true,
+  },
+  doppelT: {
+    name: 'Doppel-T-Anker',
+    segments: 2, segOffset: Math.PI / 2, gapHalf: COMMUTATOR.gapHalf,
+    coils: [{ a: 0, b: 1, angle: 0 }],
+    arms: [{ angle: 0, coil: 0, sign: 1 }, { angle: Math.PI, coil: 0, sign: -1 }],
+    torqueFactor: 1,
+    deadPoint: true,
+  },
+  dreipolig: {
+    name: 'Dreipoliger Anker',
+    segments: 3, segOffset: COMMUTATOR.threePoleOffset, gapHalf: COMMUTATOR.threePoleGapHalf,
+    coils: [0, 1, 2].map(j => ({ a: j, b: (j + 1) % 3, angle: j * TAU / 3 })),
+    arms: [0, 1, 2].map(j => ({ angle: j * TAU / 3, coil: j, sign: 1 })),
+    torqueFactor: 1,
+    deadPoint: false,
+  },
+};
+
+const BRUSHES = { left: Math.PI, right: 0 };
+const angDist = (a, b) => Math.abs(((a - b) % TAU + 3 * Math.PI) % TAU - Math.PI);
+export const rotorOf = s => ROTORS[s.rotor || 'doppelT'];
+/** Ist ein Anker mit Kommutator eingebaut? (Sonst berühren die Bürsten nichts.) */
+export const commutatorContact = s => s.rotorInstalled !== false && s.commutatorOn !== false;
+
+/** Mitte von Kommutatorsegment k beim Ankerwinkel phi */
+export function segmentCenter(rotor, k, phi) {
+  return phi + rotor.segOffset + k * TAU / rotor.segments;
+}
+
+/** Segmente, die eine Bürste (Winkel beta) berührt */
+function contacts(rotor, phi, beta) {
+  const half = Math.PI / rotor.segments - rotor.gapHalf + COMMUTATOR.brushHalf;
+  const list = [];
+  for (let k = 0; k < rotor.segments; k++) if (angDist(beta, segmentCenter(rotor, k, phi)) < half) list.push(k);
+  return list;
+}
+
+/**
+ * Ströme in den Ankerspulen. Das Netzgerät liefert die eingestellte Stromstärke I; sie teilt sich
+ * auf die Wege zwischen den Bürsten auf (alle Spulen mit gleichem Widerstand).
+ * @returns {{ coils: number[], armature: number, gap: boolean, left: number[], right: number[] }}
+ *   armature: Strom durch die Bürsten (mit Vorzeichen der Polung), gap: Bürste auf einer Lücke (Stromkreis offen)
+ */
+export function rotorCurrents(phi, s) {
+  const rotor = rotorOf(s);
+  const zero = rotor.coils.map(() => 0);
+  if (!commutatorContact(s)) return { coils: zero, armature: 0, gap: false, left: [], right: [], open: true };
+  const left = contacts(rotor, phi, BRUSHES.left), right = contacts(rotor, phi, BRUSHES.right);
+  const gap = left.length === 0 || right.length === 0;
+  if (gap || !(s.powerOn && s.current > 0)) return { coils: zero, armature: 0, gap, left, right };
+
+  // Potentiale: Segmente an der linken Bürste 1, an der rechten 0, die übrigen frei (Spulen gleich groß)
+  const V = new Array(rotor.segments).fill(0.5);
+  const fixed = new Array(rotor.segments).fill(false);
+  for (const k of left) { V[k] = 1; fixed[k] = true; }
+  for (const k of right) { V[k] = 0; fixed[k] = true; }
+  for (let it = 0; it < 50; it++) {
+    for (let k = 0; k < rotor.segments; k++) {
+      if (fixed[k]) continue;
+      const nb = rotor.coils.filter(c => c.a === k || c.b === k).map(c => V[c.a === k ? c.b : c.a]);
+      if (nb.length) V[k] = nb.reduce((x, y) => x + y, 0) / nb.length;
+    }
+  }
+  const raw = rotor.coils.map(c => V[c.a] - V[c.b]);
+  // Gesamtstrom aus der linken Bürste heraus
+  let total = 0;
+  rotor.coils.forEach((c, j) => {
+    const aL = left.includes(c.a), bL = left.includes(c.b);
+    if (aL && !bL) total += raw[j];
+    if (bL && !aL) total -= raw[j];
+  });
+  if (total <= 1e-12) return { coils: zero, armature: 0, gap: false, left, right };
+  const I = s.polarity * s.current;
+  return { coils: raw.map(r => I * r / total), armature: I, gap: false, left, right };
+}
+
+/**
+ * Ankerstrom und Kontakt der Bürsten (für Anzeige und Texte).
+ * leftBrush: Beim zweiteiligen Kommutator die Hälfte ('A' oder 'B') an der linken Bürste.
+ * armature: beim zweiteiligen Kommutator der Spulenstrom mit Vorzeichen, sonst der Strom durch die Bürsten.
  */
 export function armatureCurrent(phi, s) {
-  const on = s.powerOn && s.current > 0;
-  const sin = Math.sin(phi);
-  if (Math.abs(sin) < Math.sin(MODEL.gapAngle)) return { armature: 0, gap: true, leftBrush: null };
-  // Hälfte A liegt bei phi + 90°: oben (sin > 0) heißt Hälfte A links an der linken Bürste.
-  // Der Strom tritt an der linken Bürste ein (Pluspol bei polarity +1) und durchläuft die Spulen von A nach B.
-  const leftBrush = sin > 0 ? 'A' : 'B';
-  const i = on ? s.polarity * s.current * Math.sign(sin) : 0;
-  return { armature: i, gap: false, leftBrush };
+  const r = rotorCurrents(phi, s);
+  const rotor = rotorOf(s);
+  const two = rotor.segments === 2;
+  const leftBrush = two && r.left.length === 1 ? (r.left[0] === 0 ? 'A' : 'B') : null;
+  return { armature: two ? r.coils[0] : r.armature, gap: r.gap, leftBrush, open: !!r.open };
 }
 
 /** Strom in den Feldspulen (Elektromagnet, parallel zum Anker am selben Netzgerät) */
@@ -42,11 +135,16 @@ export function statorField(s) {
   return fieldCurrent(s) / MODEL.fieldReference;
 }
 
-/** Pol eines Ankerendes: 'N', 'S' oder null (kein Strom). end = 'A' oder 'B' */
+/** Arm k des Ankers: 'A' und 'B' stehen für die Arme 0 und 1 */
+const armIndex = end => (end === 'A' ? 0 : end === 'B' ? 1 : end);
+
+/** Pol am Ende eines Arms: 'N', 'S' oder null (kein Strom in seiner Spule) */
 export function rotorPole(end, phi, s) {
-  const i = armatureCurrent(phi, s).armature;
-  if (i === 0) return null;
-  return (i > 0) === (end === 'A') ? 'N' : 'S';
+  const arm = rotorOf(s).arms[armIndex(end)];
+  if (!arm) return null;
+  const i = rotorCurrents(phi, s).coils[arm.coil];
+  if (Math.abs(i) < 1e-9) return null;
+  return i * arm.sign > 0 ? 'N' : 'S';
 }
 
 /** Pol der Statorseite: side −1 links, +1 rechts → 'N', 'S' oder null (kein Feld) */
@@ -58,8 +156,13 @@ export function statorPole(side, s) {
 
 /** Drehmoment (positiv: gegen den Uhrzeigersinn, Blick von vorne) in N·m */
 export function torque(phi, s) {
-  const i = armatureCurrent(phi, s).armature;
-  return -MODEL.torqueConstant * i * statorField(s) * Math.sin(phi);
+  if (s.rotorInstalled === false) return 0;
+  const rotor = rotorOf(s);
+  const { coils } = rotorCurrents(phi, s);
+  let sum = 0;
+  rotor.coils.forEach((c, j) => { sum += coils[j] * Math.sin(phi + c.angle); });
+  if (sum === 0) return 0;
+  return -MODEL.torqueConstant * rotor.torqueFactor * statorField(s) * sum;
 }
 
 /**
@@ -67,15 +170,18 @@ export function torque(phi, s) {
  * gezogen, ein Südpol entgegen. Zur Darstellung der Kräfte.
  */
 export function poleForceX(end, phi, s) {
-  const i = armatureCurrent(phi, s).armature;
-  return (end === 'A' ? 1 : -1) * i * statorField(s);
+  const arm = rotorOf(s).arms[armIndex(end)];
+  if (!arm) return 0;
+  const i = rotorCurrents(phi, s).coils[arm.coil];
+  return arm.sign * i * statorField(s);
 }
 
 /**
  * Bewegung um dt weiterrechnen (Trägheit, Reibung, Haftreibung).
- * Verändert s.phi und s.omega.
+ * Verändert s.phi und s.omega. Ohne eingebauten Anker passiert nichts.
  */
 export function step(s, dt) {
+  if (s.rotorInstalled === false) { s.omega = 0; return; }
   const n = Math.max(1, Math.ceil(dt / 0.002));
   const h = dt / n;
   for (let k = 0; k < n; k++) {
@@ -88,5 +194,5 @@ export function step(s, dt) {
     if (before !== 0 && Math.sign(s.omega) !== Math.sign(before) && Math.abs(tau) <= MODEL.staticFriction) s.omega = 0;
     s.phi += s.omega * h;
   }
-  s.phi = ((s.phi % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+  s.phi = ((s.phi % TAU) + TAU) % TAU;
 }

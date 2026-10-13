@@ -153,7 +153,7 @@ export function insertRotor(type) {
   return true;
 }
 
-/** Kommutator abnehmen und in die Ablage legen */
+/** Kommutator abnehmen und in die Ablage legen (der Motor bleibt danach geöffnet) */
 export function removeCommutator() {
   if (busy() || !state.rotorInstalled || !state.commutatorOn) return false;
   const comm = rotors[state.rotor].commutator;
@@ -162,7 +162,8 @@ export function removeCommutator() {
   addStep(0, { begin: () => { state.commutatorOn = false; unpole(state.rotor); scene.attach(comm); } });
   moveTo(comm, () => ({ p: new THREE.Vector3(0, 0, 5.5), r: comm.rotation.z }), 0.7);
   moveTo(comm, () => ({ p: COMM_SLOT.clone().setZ(COMM_SLOT.z - CZ), r: 0 }), 1.1, 3);
-  closeMotor();
+  // Bürsten und vorderer Lagerbock bleiben aufgeklappt: freie Sicht auf den Anker.
+  // Beim Aufsetzen des Kommutators werden sie wieder geschlossen.
   return true;
 }
 

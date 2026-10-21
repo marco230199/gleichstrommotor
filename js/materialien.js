@@ -3,7 +3,7 @@
 // ------------------------------------------------------------------
 import * as THREE from 'three';
 
-// Farben der beiden Kommutatorhälften und der zugehörigen Ankerpole (auch in der Schaltskizze)
+// Farben der beiden Kommutatorhälften und der zugehörigen Rotorpole (auch in der Schaltskizze)
 export const COLOR_A = '#e0a526';   // gold
 export const COLOR_B = '#26a69a';   // türkis
 export const COLOR_C = '#8e6bbf';   // violett (drittes Segment beim dreipoligen Anker)
@@ -14,7 +14,7 @@ export const COLOR_S = '#2e7d32';
 export const mat = {
   table: new THREE.MeshStandardMaterial({ color: 0xc8a27a, roughness: 0.8 }),
   wood: new THREE.MeshStandardMaterial({ color: 0x9c6b3c, roughness: 0.7 }),
-  // Eisen: Stator dunkler, Anker deutlich heller – so sind beide auch ohne Polfarben gut zu unterscheiden
+  // Eisen: Stator dunkler, Rotor deutlich heller – so sind beide auch ohne Polfarben gut zu unterscheiden
   iron: new THREE.MeshStandardMaterial({ color: 0x5d656e, metalness: 0.35, roughness: 0.65 }),
   ironRotor: new THREE.MeshStandardMaterial({ color: 0xdde3ea, metalness: 0.15, roughness: 0.45 }),
   ironDark: new THREE.MeshStandardMaterial({ color: 0x4a5058, metalness: 0.35, roughness: 0.65 }),

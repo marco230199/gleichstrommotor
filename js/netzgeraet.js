@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------
 // Netzgerät mit Stromanzeige, Drehknopf, Kontrolllampe und Kabeln
-// Kabel zu den Bürsten (Anker) und – beim Elektromagneten – zusätzlich zu den Feldspulen
-// (parallel zum Anker an denselben Buchsen). Die Anzeige zeigt den Ankerstrom: Am Totpunkt,
+// Kabel zu den Bürsten (Rotor) und – beim Elektromagneten – zusätzlich zu den Feldspulen
+// (parallel zum Rotor an denselben Buchsen). Die Anzeige zeigt den Rotorstrom: Am Totpunkt,
 // wenn die Bürsten auf den Lücken liegen, springt sie auf 0. „Polung umkehren“ steckt die Kabel um.
 // ------------------------------------------------------------------
 import * as THREE from 'three';
@@ -37,7 +37,7 @@ const title = makeTextPlane('Netzgerät', 1.1, { color: '#ffffff' });
 title.position.set(0, H - 0.9, FRONT);
 group.add(title);
 
-// Digitalanzeige (Ankerstrom)
+// Digitalanzeige (Rotorstrom)
 const display = canvasTexture(320, 110);
 const screen = new THREE.Mesh(new THREE.PlaneGeometry(6, 2.1), new THREE.MeshBasicMaterial({ map: display.texture }));
 screen.position.set(-2.6, H - 3.4, FRONT);
@@ -111,7 +111,7 @@ function cable(socket, target, laneZ, approach, material, lift = 0) {
 function buildCables() {
   for (const c of cables) { scene.remove(c); c.geometry.dispose(); }
   cables = [];
-  // Anker: linke Bürste am Pluspol bei polarity +1; das Kabel zur linken Bürste läuft weiter vorne
+  // Rotor: linke Bürste am Pluspol bei polarity +1; das Kabel zur linken Bürste läuft weiter vorne
   for (const side of [-1, 1]) {
     const plus = side === -state.polarity;
     const foot = brushFoot(side);
@@ -120,7 +120,7 @@ function buildCables() {
       lane, [[foot.x + 1.5, BOARD_TOP, lane], [foot.x, BOARD_TOP, foot.z + 1.2], [foot.x, BOARD_TOP + 0.3, foot.z + 0.3]],
       plus ? mat.cableRed : mat.cableBlue);
   }
-  // Feldspulen (Elektromagnet): parallel zum Anker an denselben Buchsen des Netzgeräts,
+  // Feldspulen (Elektromagnet): parallel zum Rotor an denselben Buchsen des Netzgeräts,
   // jeweils an die äußere Buchse der Spule (die inneren verbindet das schwarze Kabel).
   // Die linke Spule liegt am Pluspol, wenn magnet · polarity = +1.
   if (state.stator === 'elektro') {

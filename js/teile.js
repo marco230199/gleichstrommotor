@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------
-// Austauschbare Teile: Ablage der Anker auf dem Tisch, Ein- und Ausbau mit Animation.
+// Austauschbare Teile: Ablage der Rotoren auf dem Tisch, Ein- und Ausbau mit Animation.
 // Zwei Teile lassen sich bewegen:
-//   – der Anker (herausnehmen, einsetzen, gegen einen anderen tauschen)
+//   – der Rotor (herausnehmen, einsetzen, gegen einen anderen tauschen)
 //   – sein Kommutator (abnehmen und wieder aufsetzen; abgenommen liegt er in der Ablage)
 // Dazu werden die Bürsten abgehoben und der vordere Lagerbock zur Seite geschoben.
 // ------------------------------------------------------------------
@@ -17,9 +17,9 @@ import { frontBearing, brushes } from './aufbau.js';
 
 export const ROTOR_TYPES = ['spule', 'doppelT', 'dreipolig'];
 const TABLE = GEO.tableY, CZ = GEO.commZ, CR = GEO.commRadius;
-const REST_Y = TABLE + 4.7;                       // Achshöhe der Anker in der Ablage
-const PULL_Z = 9;                                  // so weit wird der Anker nach vorne aus dem Stator gezogen
-// Ablage links neben der Grundplatte: Die Anker liegen quer (Achse in x-Richtung) nebeneinander.
+const REST_Y = TABLE + 4.7;                       // Achshöhe der Rotoren in der Ablage
+const PULL_Z = 9;                                  // so weit wird der Rotor nach vorne aus dem Stator gezogen
+// Ablage links neben der Grundplatte: Die Rotoren liegen quer (Achse in x-Richtung) nebeneinander.
 const SLOTS = {
   spule: new THREE.Vector3(-22, REST_Y, -12),
   doppelT: new THREE.Vector3(-22, REST_Y, -1.5),
@@ -29,7 +29,7 @@ const TRAY_RY = Math.PI / 2;                       // Drehung um y: Welle zeigt 
 const COMM_SLOT = new THREE.Vector3(-16, TABLE + 1.0 + CR, 17);   // Mitte des abgenommenen Kommutators
 const BEARING_ASIDE = -6.5, BRUSH_SWING = 20 * Math.PI / 180;   // Bürsten nach außen schwenken
 
-// ---------------- Anker bauen und ablegen
+// ---------------- Rotor bauen und ablegen
 export const rotors = {};
 for (const type of ROTOR_TYPES) {
   const r = buildRotor(type);
@@ -107,13 +107,13 @@ function closeMotor() {
 
 export const busy = () => current !== null || queue.length > 0;
 
-/** Der eingebaute Anker, solange er ruhig im Motor sitzt (sonst null) */
+/** Der eingebaute Rotor, solange er ruhig im Motor sitzt (sonst null) */
 export function installedRotor() {
   return state.rotorInstalled && !busy() ? rotors[state.rotor] : null;
 }
 
 // ---------------- Aktionen (Knöpfe)
-/** Polflächen eines Ankers wieder eisengrau (außerhalb des Motors ist er kein Magnet) */
+/** Polflächen eines Rotors wieder eisengrau (außerhalb des Motors ist er kein Magnet) */
 function unpole(type) {
   for (const arm of rotors[type].arms) arm.front.material = mat.ironRotor;
 }
@@ -131,7 +131,7 @@ function insertSteps(type) {
   addStep(0, { end: () => { state.rotor = type; state.phi = START_ANGLE; state.rotorInstalled = true; } });
 }
 
-/** Anker herausnehmen (nur mit aufgesetztem Kommutator; der bleibt am Anker) */
+/** Rotor herausnehmen (nur mit aufgesetztem Kommutator; der bleibt am Rotor) */
 export function removeRotor() {
   if (busy() || !state.rotorInstalled || !state.commutatorOn) return false;
   state.omega = 0;
@@ -141,7 +141,7 @@ export function removeRotor() {
   return true;
 }
 
-/** Anker einsetzen bzw. gegen einen anderen tauschen */
+/** Rotor einsetzen bzw. gegen einen anderen tauschen */
 export function insertRotor(type) {
   if (busy() || !state.commutatorOn) return false;
   if (state.rotorInstalled && type === state.rotor) return false;
@@ -162,12 +162,12 @@ export function removeCommutator() {
   addStep(0, { begin: () => { state.commutatorOn = false; unpole(state.rotor); scene.attach(comm); } });
   moveTo(comm, () => ({ p: new THREE.Vector3(0, 0, 5.5), r: comm.rotation.z }), 0.7);
   moveTo(comm, () => ({ p: COMM_SLOT.clone().setZ(COMM_SLOT.z - CZ), r: 0 }), 1.1, 3);
-  // Bürsten und vorderer Lagerbock bleiben aufgeklappt: freie Sicht auf den Anker.
+  // Bürsten und vorderer Lagerbock bleiben aufgeklappt: freie Sicht auf den Rotor.
   // Beim Aufsetzen des Kommutators werden sie wieder geschlossen.
   return true;
 }
 
-/** Kommutator wieder auf die Welle des eingebauten Ankers setzen */
+/** Kommutator wieder auf die Welle des eingebauten Rotors setzen */
 export function attachCommutator() {
   if (busy() || !state.rotorInstalled || state.commutatorOn) return false;
   const r = rotors[state.rotor], comm = r.commutator;
@@ -187,7 +187,7 @@ export function attachCommutator() {
   return true;
 }
 
-// ---------------- Jedes Bild: Ablauf weiterführen, eingebauten Anker drehen
+// ---------------- Jedes Bild: Ablauf weiterführen, eingebauten Rotor drehen
 export function updateParts(dt) {
   if (!current && queue.length) {
     current = queue.shift();

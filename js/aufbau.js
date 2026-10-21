@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------
 // 3D-Aufbau des Gleichstrommotors: Grundplatte, Lager, Bürsten und Stator (Permanentmagnet oder
 // Elektromagnet mit Feldspulen) sowie die einblendbaren Anzeigen (Feld, Pole, Stromrichtung, Kräfte).
-// Die austauschbaren Anker mit ihren Kommutatoren stehen in rotoren.js, Ablage und Ein-/Ausbau in teile.js.
+// Die austauschbaren Rotoren mit ihren Kommutatoren stehen in rotoren.js, Ablage und Ein-/Ausbau in teile.js.
 // Koordinaten in cm: Drehachse = z-Achse (zum Betrachter), Statorfeld in x-Richtung.
 // ------------------------------------------------------------------
 import * as THREE from 'three';
@@ -13,7 +13,7 @@ import { rod, arcShell, ring, coil, makeArrow, setArrow } from './bauteile.js';
 import { mat } from './materialien.js';
 import { scene } from './szene.js';
 
-const D = GEO.depth, ZF = D / 2;                 // Tiefe, Vorderseite von Anker und Stator
+const D = GEO.depth, ZF = D / 2;                 // Tiefe, Vorderseite von Rotor und Stator
 const RR = GEO.rotorRadius, RS = RR + GEO.airGap;
 const CZ = GEO.commZ, CR = GEO.commRadius, CL = GEO.commLength;
 export const BOARD_TOP = GEO.tableY + 1.2;       // Oberkante der Holzgrundplatte
@@ -154,7 +154,7 @@ const fieldLabel = makeTextPlane('B', 1.3, { color: '#1e88e5' });
 fieldLabel.position.set(RS - 1.2, 4.1, ZF + 1.4);
 fieldGroup.add(fieldLabel);
 
-// Pole des Ankers als Buchstaben (stehen immer aufrecht), für bis zu drei Arme
+// Pole des Rotors als Buchstaben (stehen immer aufrecht), für bis zu drei Arme
 const MAX_ARMS = 3;
 const rotorLabels = [];
 for (let k = 0; k < MAX_ARMS; k++) {
@@ -162,7 +162,7 @@ for (let k = 0; k < MAX_ARMS; k++) {
   for (const l of Object.values(rotorLabels[k])) { l.renderOrder = 6; scene.add(l); }
 }
 
-// Stromrichtung: wandernde Spitzen auf der Vorderseite der Ankerspulen (in Weltkoordinaten)
+// Stromrichtung: wandernde Spitzen auf der Vorderseite der Rotorspulen (in Weltkoordinaten)
 const currentMarks = [];
 for (let k = 0; k < 3 * 4; k++) {
   const cone = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.8, 12), mat.current);
@@ -170,7 +170,7 @@ for (let k = 0; k < 3 * 4; k++) {
   currentMarks.push(cone);
 }
 
-// Kräfte auf die Ankerpole (Polmodell): waagrecht, in Weltkoordinaten
+// Kräfte auf die Rotorpole (Polmodell): waagrecht, in Weltkoordinaten
 const forceArrows = [], forceLabels = [];
 for (let k = 0; k < MAX_ARMS; k++) {
   forceArrows.push(makeArrow(mat.force, 0.2));
@@ -184,7 +184,7 @@ const poleMat = (pole, iron) => (pole === 'N' ? mat.north : pole === 'S' ? mat.s
 let flow = 0;
 
 /**
- * rotor: der eingebaute Anker aus teile.js (oder null, wenn keiner eingebaut ist bzw. gerade bewegt wird).
+ * rotor: der eingebaute Rotor aus teile.js (oder null, wenn keiner eingebaut ist bzw. gerade bewegt wird).
  * Seine Drehung setzt teile.js; hier werden Pole, Stromrichtung und Kräfte angezeigt.
  */
 export function syncApparatus(dt, rotor) {
@@ -214,7 +214,7 @@ export function syncApparatus(dt, rotor) {
   fieldMat.opacity = 0.25 + 0.4 * Math.min(1, Math.abs(b));
   fieldLabel.rotation.y = b > 0 ? 0 : Math.PI;                     // Beschriftung nicht spiegeln
 
-  // Anker: Pole (Farbe der Polflächen und aufrechte Buchstaben), Stromrichtung, Kräfte
+  // Rotor: Pole (Farbe der Polflächen und aufrechte Buchstaben), Stromrichtung, Kräfte
   const arms = rotor ? rotor.arms : [];
   const armDefs = rotor ? rotor.def.arms : [];
   const coils = rotor ? rotorCurrents(phi, state).coils : [];
@@ -241,7 +241,7 @@ export function syncApparatus(dt, rotor) {
     }
   }
 
-  // Stromrichtung in den Ankerspulen: vorne bei positivem Strom in −y (Koordinaten des Spulenpakets)
+  // Stromrichtung in den Rotorspulen: vorne bei positivem Strom in −y (Koordinaten des Spulenpakets)
   flow += dt * 1.6;
   const packs = rotor ? rotor.packs : [];
   for (const [k, cone] of currentMarks.entries()) {

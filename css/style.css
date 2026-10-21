@@ -104,7 +104,6 @@ html, body {
 .panel .stepper button { flex: none; width: 40px; height: 40px; margin: 0; padding: 0; font-size: 1.3rem; line-height: 1; }
 .stepper input[type="range"] { flex: 1; min-width: 0; margin: 0; }
 .status { margin: 6px 0 0; font-size: 0.85rem; color: #4a5866; }
-.note { margin: 10px 0 0; padding: 8px 10px; border-radius: 8px; background: #eef3fa; color: #1d2f45; font-size: 0.85rem; line-height: 1.35; }
 .check { display: flex; gap: 8px; align-items: center; margin-top: 10px; font-size: 0.95rem; cursor: pointer; }
 .check input { width: 22px; height: 22px; accent-color: #1d4f91; }
 .segmented { display: flex; gap: 6px; }

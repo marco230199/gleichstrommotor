@@ -1,8 +1,8 @@
 // ------------------------------------------------------------------
 // Schaltskizze: Blick entlang der Drehachse (von vorne, wie die Kamera „Blick von vorne“)
-// Stator (Magnetschalen oder Polkerne mit Feldspulen), mitdrehender Anker (Spule mit Eisenkern,
+// Stator (Magnetschalen oder Polkerne mit Feldspulen), mitdrehender Rotor (Spule mit Eisenkern,
 // Doppel-T-Anker oder dreipoliger Anker) mit Polen, Kommutator, Bürsten, Schalter und Batterie. Beim Elektromagneten liegen die Feldspulen
-// parallel zum Anker an der Batterie.
+// parallel zum Rotor an der Batterie.
 // ------------------------------------------------------------------
 import { state } from './state.js';
 import { armatureCurrent, rotorCurrents, rotorOf, segmentCenter, fieldCurrent, statorField, rotorPole, statorPole, poleForceX } from './physik.js';
@@ -12,7 +12,7 @@ import { COLOR_A, COLOR_B, COLOR_C, COLOR_N, COLOR_S } from './materialien.js';
 const $ = id => document.getElementById(id);
 const INK = '#33404d', IRON = '#6b737c', IRON_DARK = '#4f565e', IRON_ROTOR = '#c9d0d8', COPPER = '#c46a2b';
 const CURRENT = '#f57c00', FORCE = '#7b1fa2', FIELD = 'rgba(30, 136, 229, 0.45)';
-// Polfarbe; ohne Pol die Eisenfarbe des Teils (Stator dunkler, Anker heller)
+// Polfarbe; ohne Pol die Eisenfarbe des Teils (Stator dunkler, Rotor heller)
 const poleColor = (p, iron = IRON) => (p === 'N' ? COLOR_N : p === 'S' ? COLOR_S : iron);
 const SEGMENT_COLORS = [COLOR_A, COLOR_B, COLOR_C];
 
@@ -67,7 +67,7 @@ export function drawSketch() {
 
   const u = W / 100;                              // Zeichnungseinheit
   const cx = W / 2, cy = 40 * u;                  // Drehachse
-  const k = 19 * u / GEO.rotorRadius;             // Maßstab: Ankerradius 19u
+  const k = 19 * u / GEO.rotorRadius;             // Maßstab: Rotorradius 19u
   const rr = GEO.rotorRadius * k, rs = (GEO.rotorRadius + GEO.airGap) * k;
   const shoeIn = (GEO.rotorRadius - GEO.shoeThickness) * k;
   const half = GEO.shoeHalf, rotorHalf = GEO.rotorShoeHalf;
@@ -113,7 +113,7 @@ export function drawSketch() {
     }
   }
 
-  // Feldlinien zwischen den Polschuhen (hinter dem Anker)
+  // Feldlinien zwischen den Polschuhen (hinter dem Rotor)
   const bField = statorField(state);
   if (state.showField && bField !== 0) {
     ctx.strokeStyle = ctx.fillStyle = FIELD;
@@ -126,7 +126,7 @@ export function drawSketch() {
     }
   }
 
-  // ---------------- Anker: Eisenkern, Spulen, Polflächen mit Polen (nur wenn eingebaut)
+  // ---------------- Rotor: Eisenkern, Spulen, Polflächen mit Polen (nur wenn eingebaut)
   const ang = -phi;                               // Canvas: y nach unten
   const rotor = rotorOf(state);
   const armGeo = [];                              // je Arm: Winkel (Canvas), Radius für Buchstaben und Kraft
@@ -177,7 +177,7 @@ export function drawSketch() {
     for (const g of armGeo) {
       if (state.showPoles && g.pole) letter(ctx, g.pole, cx + g.labelR * Math.cos(g.c), cy + g.labelR * Math.sin(g.c), 4.5 * u);
     }
-    // Kräfte auf die Ankerpole (waagrecht: Nordpol in Feldrichtung, Südpol entgegen)
+    // Kräfte auf die Rotorpole (waagrecht: Nordpol in Feldrichtung, Südpol entgegen)
     if (state.showForces) {
       armGeo.forEach((g, j) => {
         const f = poleForceX(j, phi, state);
@@ -256,7 +256,7 @@ export function drawSketch() {
   ctx.fillStyle = '#1e5bc6';
   ctx.fillText('−', minusX + (plusLeft ? 3.5 : -3.5) * u, yb - 5.5 * u);
 
-  // Feldspulen parallel zum Anker: Abzweig unterhalb des Schalters bzw. rechts auf gleicher Höhe
+  // Feldspulen parallel zum Rotor: Abzweig unterhalb des Schalters bzw. rechts auf gleicher Höhe
   let fieldPath = null;
   if (elektro && coilEnds) {
     const L = coilEnds.left, R = coilEnds.right;
@@ -301,15 +301,15 @@ export function drawSketch() {
 /** Kurzer Text zu Bürsten, Kommutator und Feld */
 export function sketchStatus() {
   const i = armatureCurrent(state.phi, state);
-  const field = state.stator === 'elektro' ? ' Die Feldspulen liegen parallel zum Anker.' : '';
-  if (!state.rotorInstalled) return 'Kein Anker eingebaut: Zwischen den Bürsten ist der Stromkreis offen.' + field;
-  if (!state.commutatorOn) return 'Kommutator abgenommen: Die Bürsten berühren nichts, der Ankerstromkreis ist offen.' + field;
+  const field = state.stator === 'elektro' ? ' Die Feldspulen liegen parallel zum Rotor.' : '';
+  if (!state.rotorInstalled) return 'Kein Rotor eingebaut: Zwischen den Bürsten ist der Stromkreis offen.' + field;
+  if (!state.commutatorOn) return 'Kommutator abgenommen: Die Bürsten berühren nichts, der Rotorstromkreis ist offen.' + field;
   if (!state.powerOn) return 'Schalter offen: Es fließt kein Strom.';
   if (state.current === 0) return 'Die Stromstärke ist null.';
   if (i.gap) {
     return state.omega !== 0
-      ? 'Totpunkt: Die Bürsten liegen auf den Lücken, der Anker ist stromlos. Er dreht durch seinen Schwung weiter.'
-      : 'Totpunkt: Die Bürsten liegen auf den Lücken, der Anker ist stromlos. Ohne Schwung bleibt er stehen.';
+      ? 'Totpunkt: Die Bürsten liegen auf den Lücken, der Rotor ist stromlos. Er dreht durch seinen Schwung weiter.'
+      : 'Totpunkt: Die Bürsten liegen auf den Lücken, der Rotor ist stromlos. Ohne Schwung bleibt er stehen.';
   }
   if (rotorOf(state).segments === 3) {
     const r = rotorCurrents(state.phi, state);

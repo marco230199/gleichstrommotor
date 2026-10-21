@@ -30,9 +30,6 @@ export function refresh() {
   }
   $('magnetBtn').textContent = elektro ? 'Feldspulen umpolen' : 'Magnet umdrehen (N ↔ S)';
   $('magnetStatus').textContent = statorText();
-  $('statorNote').innerHTML = elektro
-    ? 'Die Feldspulen hängen <strong>parallel</strong> zum Anker am selben Netzgerät. Beim <strong>Umpolen</strong> ändern Anker <em>und</em> Stator ihre Pole – die Drehrichtung bleibt gleich. Probiere es aus!'
-    : 'Der Permanentmagnet behält seine Pole. Beim <strong>Umpolen</strong> ändert nur der Anker seine Pole – der Motor dreht sich andersherum.';
 
   refreshParts();
 
@@ -49,13 +46,7 @@ export function refresh() {
   $('sketchSizeBtn').setAttribute('aria-pressed', String(state.sketchLarge));
 }
 
-const ROTOR_NOTES = {
-  spule: 'Eine <strong>Spule auf einem Eisenstab</strong> – wie die Leiterschleife, nur mit vielen Windungen. Der Eisenkern verstärkt das Magnetfeld der Spule: Der Stab wird zum Elektromagneten. Am <strong>Totpunkt</strong> ist er stromlos und braucht Schwung.',
-  doppelT: 'Zwei Spulen in Reihe auf einem <strong>Doppel-T-Kern</strong>. Die Polschuhe führen das Feld nah an den Stator heran, der Motor zieht kräftiger. Am <strong>Totpunkt</strong> ist der Anker stromlos und braucht Schwung.',
-  dreipolig: 'Drei Spulen auf drei Armen, <strong>dreiteiliger Kommutator</strong>: Es fließt immer Strom, und es gibt in jeder Stellung ein Drehmoment. <strong>Kein Totpunkt</strong> – der Motor läuft aus jeder Stellung an und dreht gleichmäßiger.',
-};
-
-/** Knöpfe und Hinweise zu Anker und Kommutator (auch während des Umbaus aktualisiert) */
+/** Knöpfe zu Rotor und Kommutator (auch während des Umbaus aktualisiert) */
 function refreshParts() {
   const moving = busy();
   for (const button of document.querySelectorAll('[data-rotor]')) {
@@ -65,18 +56,11 @@ function refreshParts() {
     button.disabled = moving || !state.commutatorOn;
   }
   const rotorBtn = $('rotorBtn'), commBtn = $('commBtn');
-  rotorBtn.textContent = state.rotorInstalled ? 'Anker herausnehmen' : `${rotorOf(state).name} einsetzen`;
+  rotorBtn.textContent = state.rotorInstalled ? 'Rotor herausnehmen' : `${rotorOf(state).name} einsetzen`;
   rotorBtn.disabled = moving || !state.commutatorOn;
   commBtn.textContent = state.commutatorOn ? 'Kommutator abnehmen' : 'Kommutator aufsetzen';
   commBtn.disabled = moving || !state.rotorInstalled;
   $('pushBtn').disabled = !state.rotorInstalled;
-  let note;
-  if (moving) note = 'Umbau läuft …';
-  else if (!state.rotorInstalled) note = 'Der Motor ist leer. Wähle oben einen Anker aus, um ihn einzusetzen.';
-  else if (!state.commutatorOn) {
-    note = 'Ohne Kommutator berühren die Bürsten nichts: Der Anker bekommt <strong>keinen Strom</strong>. Jetzt siehst du Anker, Spulen und ihre Anschlüsse gut. Zum Tauschen des Ankers den Kommutator wieder aufsetzen.';
-  } else note = ROTOR_NOTES[state.rotor];
-  if ($('rotorNote').innerHTML !== note) $('rotorNote').innerHTML = note;
 }
 
 function statorText() {
@@ -107,13 +91,13 @@ function motionWarn() {
 function motionText() {
   const w = state.omega;
   if (busy()) return 'Umbau läuft …';
-  if (!state.rotorInstalled) return 'Kein Anker eingebaut.';
-  if (!state.playing) return 'Angehalten: Mit dem Regler „Drehwinkel“ kannst du den Anker in jede Stellung drehen.';
-  if (!state.commutatorOn && Math.abs(state.omega) < 0.05) return 'Ohne Kommutator: Die Bürsten berühren nichts, der Anker ist stromlos.';
+  if (!state.rotorInstalled) return 'Kein Rotor eingebaut.';
+  if (!state.playing) return 'Angehalten: Mit dem Regler „Drehwinkel“ kannst du den Rotor in jede Stellung drehen.';
+  if (!state.commutatorOn && Math.abs(state.omega) < 0.05) return 'Ohne Kommutator: Die Bürsten berühren nichts, der Rotor ist stromlos.';
   if (motionWarn()) {
-    return 'Totpunkt: Die Pole des Ankers stehen genau vor den Statorpolen, die Bürsten liegen auf den Lücken. Stoße den Anker an!';
+    return 'Totpunkt: Die Pole des Rotors stehen genau vor den Statorpolen, die Bürsten liegen auf den Lücken. Stoße den Rotor an!';
   }
-  if (Math.abs(w) < 0.05) return state.powerOn ? 'Der Anker steht still.' : 'Kein Strom: Der Anker steht still.';
+  if (Math.abs(w) < 0.05) return state.powerOn ? 'Der Rotor steht still.' : 'Kein Strom: Der Rotor steht still.';
   const dir = w > 0 ? 'gegen den Uhrzeigersinn' : 'im Uhrzeigersinn';
   return `Der Motor dreht sich ${dir} (Blick von vorne).`;
 }
@@ -149,7 +133,7 @@ export function initUi() {
   for (const button of document.querySelectorAll('[data-stator]')) {
     button.addEventListener('click', () => { state.stator = button.dataset.stator; refresh(); });
   }
-  // Anker wählen: eingebaut → austauschen, sonst diesen Anker einsetzen
+  // Rotor wählen: eingebaut → austauschen, sonst diesen Rotor einsetzen
   for (const button of document.querySelectorAll('[data-rotor]')) {
     button.addEventListener('click', () => {
       if (!state.rotorInstalled) state.rotor = button.dataset.rotor;

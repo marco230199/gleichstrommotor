@@ -2,11 +2,11 @@
 // Physik des Gleichstrommotors im Polmodell (ohne 3D, testbar mit node --test)
 //
 // Blick von vorne entlang der Drehachse (z zeigt zum Betrachter), Statorfeld in x-Richtung.
-// Der Anker ist ein Elektromagnet aus einer oder mehreren Spulen. Jede Spule magnetisiert ihren
-// Eisenkern in eine feste Richtung (Winkel im Anker); Strom positiv → Moment in diese Richtung.
+// Der Rotor ist ein Elektromagnet aus einer oder mehreren Spulen. Jede Spule magnetisiert ihren
+// Eisenkern in eine feste Richtung (Winkel im Rotor); Strom positiv → Moment in diese Richtung.
 // Drehmoment im Statorfeld: τ = Σ m × B, also τ = −K · f · B_x · Σ i_Spule · sin(phi + Winkel).
 //
-// Die Anker unterscheiden sich durch ihren Kommutator (Zahl der Segmente) und ihre Spulen:
+// Die Rotoren unterscheiden sich durch ihren Kommutator (Zahl der Segmente) und ihre Spulen:
 //   spule     – Eisenstab mit einer Spule, zweiteiliger Kommutator (Übergang von der Leiterschleife)
 //   doppelT   – Doppel-T-Anker: zwei Spulen in Reihe, Polschuhe, zweiteiliger Kommutator
 //   dreipolig – drei Arme mit je einer Spule (Dreieckschaltung), dreiteiliger Kommutator: kein Totpunkt
@@ -16,8 +16,8 @@ import { MODEL, COMMUTATOR } from './config.js';
 const TAU = 2 * Math.PI;
 
 /**
- * Beschreibung der Anker.
- * segments: Zahl der Kommutatorsegmente; segOffset: Lage von Segment 0 relativ zum Anker (rad);
+ * Beschreibung der Rotoren.
+ * segments: Zahl der Kommutatorsegmente; segOffset: Lage von Segment 0 relativ zum Rotor (rad);
  * gapHalf: halbe Lücke zwischen den Segmenten.
  * coils: Spulen zwischen Segment a und b; Strom von a nach b magnetisiert in Richtung angle.
  * arms: Arme/Enden des Eisenkerns mit Pol: Winkel, zugehörige Spule und Vorzeichen (+1: Nordpol bei positivem Strom).
@@ -52,10 +52,10 @@ export const ROTORS = {
 const BRUSHES = { left: Math.PI, right: 0 };
 const angDist = (a, b) => Math.abs(((a - b) % TAU + 3 * Math.PI) % TAU - Math.PI);
 export const rotorOf = s => ROTORS[s.rotor || 'doppelT'];
-/** Ist ein Anker mit Kommutator eingebaut? (Sonst berühren die Bürsten nichts.) */
+/** Ist ein Rotor mit Kommutator eingebaut? (Sonst berühren die Bürsten nichts.) */
 export const commutatorContact = s => s.rotorInstalled !== false && s.commutatorOn !== false;
 
-/** Mitte von Kommutatorsegment k beim Ankerwinkel phi */
+/** Mitte von Kommutatorsegment k beim Rotorwinkel phi */
 export function segmentCenter(rotor, k, phi) {
   return phi + rotor.segOffset + k * TAU / rotor.segments;
 }
@@ -69,7 +69,7 @@ function contacts(rotor, phi, beta) {
 }
 
 /**
- * Ströme in den Ankerspulen. Das Netzgerät liefert die eingestellte Stromstärke I; sie teilt sich
+ * Ströme in den Rotorspulen. Das Netzgerät liefert die eingestellte Stromstärke I; sie teilt sich
  * auf die Wege zwischen den Bürsten auf (alle Spulen mit gleichem Widerstand).
  * @returns {{ coils: number[], armature: number, gap: boolean, left: number[], right: number[] }}
  *   armature: Strom durch die Bürsten (mit Vorzeichen der Polung), gap: Bürste auf einer Lücke (Stromkreis offen)
@@ -108,7 +108,7 @@ export function rotorCurrents(phi, s) {
 }
 
 /**
- * Ankerstrom und Kontakt der Bürsten (für Anzeige und Texte).
+ * Rotorstrom und Kontakt der Bürsten (für Anzeige und Texte).
  * leftBrush: Beim zweiteiligen Kommutator die Hälfte ('A' oder 'B') an der linken Bürste.
  * armature: beim zweiteiligen Kommutator der Spulenstrom mit Vorzeichen, sonst der Strom durch die Bürsten.
  */
@@ -120,7 +120,7 @@ export function armatureCurrent(phi, s) {
   return { armature: two ? r.coils[0] : r.armature, gap: r.gap, leftBrush, open: !!r.open };
 }
 
-/** Strom in den Feldspulen (Elektromagnet, parallel zum Anker am selben Netzgerät) */
+/** Strom in den Feldspulen (Elektromagnet, parallel zum Rotor am selben Netzgerät) */
 export function fieldCurrent(s) {
   if (s.stator !== 'elektro' || !s.powerOn) return 0;
   return s.magnet * s.polarity * s.current;
@@ -135,7 +135,7 @@ export function statorField(s) {
   return fieldCurrent(s) / MODEL.fieldReference;
 }
 
-/** Arm k des Ankers: 'A' und 'B' stehen für die Arme 0 und 1 */
+/** Arm k des Rotors: 'A' und 'B' stehen für die Arme 0 und 1 */
 const armIndex = end => (end === 'A' ? 0 : end === 'B' ? 1 : end);
 
 /** Pol am Ende eines Arms: 'N', 'S' oder null (kein Strom in seiner Spule) */
@@ -166,7 +166,7 @@ export function torque(phi, s) {
 }
 
 /**
- * Kraft auf einen Ankerpol in x-Richtung (Polmodell, relativ): Ein Nordpol wird in Feldrichtung
+ * Kraft auf einen Rotorpol in x-Richtung (Polmodell, relativ): Ein Nordpol wird in Feldrichtung
  * gezogen, ein Südpol entgegen. Zur Darstellung der Kräfte.
  */
 export function poleForceX(end, phi, s) {
@@ -178,7 +178,7 @@ export function poleForceX(end, phi, s) {
 
 /**
  * Bewegung um dt weiterrechnen (Trägheit, Reibung, Haftreibung).
- * Verändert s.phi und s.omega. Ohne eingebauten Anker passiert nichts.
+ * Verändert s.phi und s.omega. Ohne eingebauten Rotor passiert nichts.
  */
 export function step(s, dt) {
   if (s.rotorInstalled === false) { s.omega = 0; return; }

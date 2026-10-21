@@ -1,0 +1,108 @@
+/* Erklärvideo: feste Bühne 1920 × 1080, keine Bedienelemente.
+   Ein- und Ausblenden steuert js/video (über opacity), nicht CSS-Übergänge:
+   Bei der Aufnahme läuft die Zeit Bild für Bild und nicht in Echtzeit. */
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: #e8edf2;
+  color: #1d2733;
+}
+#scene { position: fixed; inset: 0; }
+#scene canvas { display: block; }
+#linien { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+#beschriftungen { position: fixed; inset: 0; pointer-events: none; }
+
+.marke {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  padding: 8px 16px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  font-size: 30px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.marke.gross { font-size: 46px; padding: 10px 24px; color: #b71c1c; }
+
+.sketch {
+  position: fixed;
+  right: 36px;
+  top: 36px;
+  width: 520px;
+  padding: 14px 18px 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+}
+.sketch h2 { margin: 0 0 6px; font-size: 24px; }
+.sketch h2 span { font-weight: normal; color: #4a5866; font-size: 20px; }
+.sketch canvas { display: block; width: 100%; aspect-ratio: 1 / 0.88; }
+
+.kapitel {
+  position: fixed;
+  left: 36px;
+  top: 36px;
+  padding: 12px 22px;
+  border-radius: 12px;
+  background: #1d4f91;
+  color: #fff;
+  font-size: 30px;
+  font-weight: 600;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+}
+
+/* Tafel: eingeblendete Zeichnungen (js/video/tafel.js), links unter dem Kapitel */
+.tafel {
+  position: fixed;
+  left: 36px;
+  top: 112px;
+  width: 900px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+}
+.tafel canvas { display: block; width: 100%; }
+
+.untertitel {
+  position: fixed;
+  left: 50%;
+  bottom: 40px;
+  transform: translateX(-50%);
+  max-width: 1500px;
+  padding: 10px 26px;
+  border-radius: 10px;
+  background: rgba(20, 28, 38, 0.78);
+  color: #fff;
+  font-size: 34px;
+  line-height: 1.3;
+  text-align: center;
+}
+.untertitel:empty { display: none; }
+
+.titelkarte {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(232, 237, 242, 0.94);
+  text-align: center;
+  opacity: 0;
+}
+.titelkarte h1 { margin: 0; font-size: 84px; color: #1d4f91; }
+.titelkarte p { margin: 22px 0 0; font-size: 46px; color: #33404d; max-width: 1400px; line-height: 1.35; }
+.titelkarte.merke h1 { font-size: 70px; }
+.titelkarte.merke p { font-size: 40px; text-align: left; }
+
+/* Quellenhinweis unten auf der Schlusskarte */
+.titelkarte.merke p.abspann { position: absolute; bottom: 40px; margin: 0; font-size: 22px; color: #6b7785; text-align: center; }

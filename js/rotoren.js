@@ -1,10 +1,10 @@
 // ------------------------------------------------------------------
-// Die austauschbaren Anker als 3D-Bauteile, jeweils mit eigenem, abnehmbarem Kommutator.
+// Die austauschbaren Rotoren als 3D-Bauteile, jeweils mit eigenem, abnehmbarem Kommutator.
 //   spule     – Eisenstab mit einer Spule (ohne Polschuhe)
 //   doppelT   – Doppel-T-Anker: zwei Spulen, Polschuhe
 //   dreipolig – drei Arme mit Polschuhen und je einer Spule, dreiteiliger Kommutator
 // Die Lage der Kommutatorsegmente stammt aus der Physik (ROTORS), damit 3D und Rechnung übereinstimmen.
-// Koordinaten in cm im Anker: Drehachse = z, Arm 0 zeigt in +x.
+// Koordinaten in cm im Rotor: Drehachse = z, Arm 0 zeigt in +x.
 // ------------------------------------------------------------------
 import * as THREE from 'three';
 import { GEO } from './config.js';
@@ -32,7 +32,7 @@ function buildCommutator(def) {
   return group;
 }
 
-/** Zuleitung von einer Spule zu einem Kommutatorsegment (Winkel des Segments im Anker) */
+/** Zuleitung von einer Spule zu einem Kommutatorsegment (Winkel des Segments im Rotor) */
 function lead(start, segAngle, material, parent, around = 0) {
   const end = [CR * 0.8 * Math.cos(segAngle), CR * 0.8 * Math.sin(segAngle), CZ - CL / 2];
   const a = segAngle + around;
@@ -126,8 +126,8 @@ function buildDreipolig(body) {
 const BUILDERS = { spule: buildSpule, doppelT: buildDoppelT, dreipolig: buildDreipolig };
 
 /**
- * Anker bauen. Rückgabe:
- *  group      – ganzer Anker (Welle, Eisen, Spulen, Kommutator), dreht sich um z
+ * Rotor bauen. Rückgabe:
+ *  group      – ganzer Rotor (Welle, Eisen, Spulen, Kommutator), dreht sich um z
  *  commutator – abnehmbare Gruppe (Kind von group, solange aufgesetzt)
  *  arms       – je Arm: front (Fläche für die Polfarbe), labelR, tipR
  *  packs      – Spulenpakete für die Stromrichtungs-Anzeige

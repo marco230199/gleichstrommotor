@@ -32,7 +32,7 @@ test('Statorpole: Permanentmagnet und Elektromagnet', () => {
   assert.equal(statorField({ ...e, current: 6 }), 2, 'Feld proportional zum Feldstrom');
 });
 
-test('Pole: Ungleichnamige Pole ziehen sich an – Kraft auf Ankerpol A zum Statorsüdpol', () => {
+test('Pole: Ungleichnamige Pole ziehen sich an – Kraft auf Rotorpol A zum Statorsüdpol', () => {
   const s = base();                      // Nordpol links, Südpol rechts; A ist Nordpol
   assert.ok(poleForceX('A', deg(60), s) > 0, 'Nordpol A wird nach rechts zum Südpol gezogen');
   assert.ok(poleForceX('B', deg(60), s) < 0, 'Südpol B wird nach links zum Nordpol gezogen');
@@ -59,7 +59,7 @@ test('Permanentmagnet: Umpolen kehrt die Drehrichtung um, Magnet umdrehen auch',
 test('Elektromagnet: Umpolen ändert die Drehrichtung nicht, nur Feldspulen umpolen tut es', () => {
   const e = base({ stator: 'elektro' });
   const t = torque(deg(60), e);
-  assert.ok(torque(deg(60), { ...e, polarity: -1 }) * t > 0, 'Anker und Feld werden gemeinsam umgepolt');
+  assert.ok(torque(deg(60), { ...e, polarity: -1 }) * t > 0, 'Rotor und Feld werden gemeinsam umgepolt');
   assert.ok(torque(deg(60), { ...e, magnet: -1 }) * t < 0, 'nur die Feldspulen umgepolt');
 });
 
@@ -89,14 +89,14 @@ test('Der Motor läuft dauerhaft (Kommutator) und steht ohne Strom', () => {
   assert.equal(off.omega, 0);
 });
 
-test('Totpunkt: Steht der Anker auf der Lücke, läuft er ohne Anstoßen nicht an', () => {
+test('Totpunkt: Steht der Rotor auf der Lücke, läuft er ohne Anstoßen nicht an', () => {
   const s = base({ phi: 0 });
   step(s, 1);
   assert.equal(s.omega, 0);
   assert.ok(MODEL.gapAngle > 0);
 });
 
-// ---------------- Anker zum Austauschen, Kommutator abnehmen, Anker ausbauen
+// ---------------- Rotor zum Austauschen, Kommutator abnehmen, Rotor ausbauen
 import { ROTORS, rotorCurrents } from '../js/physik.js';
 
 test('Spule mit Eisenkern: wie der Doppel-T-Anker (Totpunkt), nur schwächer', () => {
@@ -136,7 +136,7 @@ test('Dreipoliger Anker läuft aus dem Stand an, auch dort, wo der Doppel-T-Anke
   assert.equal(d.omega, 0);
 });
 
-test('Ohne Kommutator oder ohne Anker fließt kein Ankerstrom und es gibt kein Drehmoment', () => {
+test('Ohne Kommutator oder ohne Rotor fließt kein Rotorstrom und es gibt kein Drehmoment', () => {
   for (const extra of [{ commutatorOn: false }, { rotorInstalled: false }]) {
     const s = base(extra);
     assert.equal(armatureCurrent(deg(60), s).armature, 0);

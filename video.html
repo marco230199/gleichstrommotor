@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gleichstrommotor – Erklärvideo</title>
+  <link rel="stylesheet" href="css/video.css" />
+</head>
+<body>
+  <!-- Erklärvideo: Ablauf nach js/video/regie.js, Sprechertext in video/texte.json.
+       Im Browser geöffnet läuft das Video als Vorschau (ohne Ton);
+       aufgenommen wird es mit videos/physik/gleichstrommotor_polmodell/aufnahme.mjs. -->
+  <div id="scene"></div>
+  <svg id="linien"></svg>
+  <div id="beschriftungen"></div>
+
+  <section class="sketch" id="sketch">
+    <h2>Schaltskizze <span>(Blick von vorne)</span></h2>
+    <canvas id="sketchCanvas"></canvas>
+  </section>
+
+  <section class="tafel" id="tafel">
+    <canvas id="tafelCanvas" width="1440" height="820"></canvas>
+  </section>
+
+  <div class="kapitel" id="kapitel"></div>
+  <div class="untertitel" id="untertitel"></div>
+
+  <div class="titelkarte" id="titelkarte">
+    <h1>Der Gleichstrommotor</h1>
+    <p>Rotor, Stator und Kommutator</p>
+  </div>
+  <div class="titelkarte merke" id="schlusskarte">
+    <h1>Merke</h1>
+    <p>Die stromdurchflossene Spule ist ein Elektromagnet. Als <b>Rotor</b> richtet sie sich im Magnetfeld
+      des <b>Stators</b> aus.</p>
+    <p>Der <b>Kommutator</b> polt den Rotor bei jeder halben Umdrehung um. Dann stoßen sich gleichnamige Pole
+      ab, und der Rotor dreht sich weiter.</p>
+    <p>In der Praxis: Elektromagnete als Stator, geformte Eisenkerne und mehrpolige Rotoren.</p>
+    <p class="abspann" id="abspann"></p>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="js/video/video.js"></script>
+</body>
+</html>

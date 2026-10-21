@@ -11,7 +11,7 @@
 
   <div class="header">
     <h1>Gleichstrommotor</h1>
-    <p>Anker aus Spulen mit Eisenkern, Stator als Permanent- oder Elektromagnet</p>
+    <p>Rotor aus Spulen mit Eisenkern, Stator als Permanent- oder Elektromagnet</p>
   </div>
 
   <section class="sketch" id="sketch" aria-label="Schaltskizze">
@@ -55,19 +55,17 @@
       </div>
       <button id="magnetBtn" type="button">Magnet umdrehen (N ↔ S)</button>
       <p class="status" id="magnetStatus"></p>
-      <p class="note" id="statorNote"></p>
     </section>
 
     <section>
-      <h2>Anker</h2>
-      <div class="segmented" role="group" aria-label="Anker auswählen">
+      <h2>Rotor</h2>
+      <div class="segmented" role="group" aria-label="Rotor auswählen">
         <button type="button" data-rotor="spule">Spule</button>
         <button type="button" data-rotor="doppelT">Doppel-T</button>
         <button type="button" data-rotor="dreipolig">Dreipolig</button>
       </div>
-      <button id="rotorBtn" type="button">Anker herausnehmen</button>
+      <button id="rotorBtn" type="button">Rotor herausnehmen</button>
       <button id="commBtn" type="button">Kommutator abnehmen</button>
-      <p class="note" id="rotorNote"></p>
     </section>
 
     <section>
@@ -89,7 +87,7 @@
       <label class="check"><input id="polesCheck" type="checkbox" /> Pole (N rot, S grün)</label>
       <label class="check"><input id="fieldCheck" type="checkbox" /> Magnetfeld des Stators</label>
       <label class="check"><input id="currentCheck" type="checkbox" /> Stromrichtung</label>
-      <label class="check"><input id="forceCheck" type="checkbox" /> Kräfte auf die Ankerpole</label>
+      <label class="check"><input id="forceCheck" type="checkbox" /> Kräfte auf die Rotorpole</label>
       <label class="check"><input id="sketchCheck" type="checkbox" /> Schaltskizze</label>
     </section>
   </aside>
